@@ -9,7 +9,7 @@
  * Signal   | Dot | Dash | SPause | MPause | LPause |
  * Duration | <T  | >2T  |  1.5T  |  4.5T  |   7T   |
  */
- 
+
 const int button_pin = 7;
 int button_state;
 int state;
@@ -27,7 +27,7 @@ void loop()
 {
   /*
    * Get the state of the button at the beginning of the loop.
-   * Record how long the button stays in the same state, delta_t, 
+   * Record how long the button stays in the same state, delta_t,
    * then handle what will happen based on the start state
    */
   state = digitalRead(button_pin);
@@ -46,7 +46,8 @@ void handle(int state, int delta_t) {
     else {
       Serial.print(DOT);
     }
-  } else if (delta_t > 1*T && !state) { /* Check if state has been low longer than SPAUSE */
+  /* Check if state has been low longer than SPAUSE */
+  } else if (delta_t > 1*T && !state) {
     if (delta_t <= 4.5*T) {
       Serial.print(MPAUSE);
     } else {
