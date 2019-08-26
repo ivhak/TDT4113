@@ -1,12 +1,22 @@
+"""
+Run this program with
+
+          python3 morse.py
+
+to use the default serial port '/dev/ttyUSB0'.
+Alternatively, to use a different serial port
+
+          python3 morse.py <serial_port>
+"""
+
 import sys
 import arduino_connect
 
-
 # Codes for the 4 signals sent to this level from the Arduino
-_dot = 1
-_dash = 2
-_mpause = 3
-_lpause = 4
+_DOT = 1
+_DASH = 2
+_MPAUSE = 3
+_LPAUSE = 4
 
 
 # Morse Code Class
@@ -70,8 +80,7 @@ class mocoder():
         self.current_word = ''
         self.current_symbol = ''
 
-    # This should receive an integer in range 1-4 from the Arduino via a serial
-    # port:
+    # Receive an integer in range 1-4 from the Arduino via a serial port:
     #       1  :  DOT
     #       2  :  DASH
     #       3  :  MPAUSE (letter pause)
@@ -95,21 +104,23 @@ class mocoder():
     # Handle MPAUSE signal: Decode current symbol and update current word
     def handle_symbol_end(self):
         letter = self._morse_codes.get(self.current_symbol, '')
+        print(letter)
         self.update_current_word(letter)
         self.current_symbol = ''
 
-    # handle LPAUSE signal: End current word and print it
+    # Handle LPAUSE signal: End current word and print it
     def handle_word_end(self):
         self.handle_symbol_end()
-        print(self.current_word)
+        print("word:" + self.current_word)
         self.current_word = ''
 
+    # Process a signal and call the appropriate function
     def process_signal(self, sig):
-        if (sig == _dot or sig == _dash):
+        if (sig == _DOT or sig == _DASH):
             self.update_current_symbol(str(sig))
-        elif (sig == _mpause):
+        elif (sig == _MPAUSE):
             self.handle_symbol_end()
-        elif (sig == _lpause):
+        elif (sig == _LPAUSE):
             self.handle_word_end()
 
     # The signal returned by the serial port is one (sometimes 2) bytes, that
@@ -125,11 +136,6 @@ class mocoder():
                 self.process_signal(int(chr(byte)))
 
 
-# Run this program with either just:
-#           python3 morse.py
-# to use the default serial port '/dev/ttyUSB0'.
-# Alternatively, to use a different serial porty:
-#           python4 morse.py <serial_port>
 def main():
     port = None
     if (len(sys.argv[1:]) == 1):  # Check for arg

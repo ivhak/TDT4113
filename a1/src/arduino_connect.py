@@ -37,4 +37,4 @@ def basic_connect(arport='/dev/ttyUSB0'):
         return serial.Serial(arport, 9600, timeout=.1)
     except serial.SerialException:
         pass
-    exit("Arduino not connected to {}".format(arport))
+    exit("Arduino could not connect to {}".format(arport))
