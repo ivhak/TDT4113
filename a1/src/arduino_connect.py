@@ -25,14 +25,13 @@ def pc_connect():
             pass
     exit("Arduino was not found")
 
-# **** For MACs ******
+
+# **** Mac/Linux ******
 
 # arport = Arduino device port, which you can find at the bottom of your
 # arduino window or via Arduino menu options tools/port.  The default will
 # probably NOT work for your machine, but it may look quite similar, differing
 # only in the final 4 digits.
-
-
 def basic_connect(arport='/dev/ttyUSB0'):
     try:
         return serial.Serial(arport, 9600, timeout=.1)

@@ -1,17 +1,8 @@
-'''
-This file provides a few of the 'tricky' elements of the Morse Code
-project: those involving setting up and reading from the serial port.
-
-IMPORTANT!! If you are a MAC user, you will need to modify the actual device
-code for your serial port in arduino_connect.py
-'''
-
-# This is the key import so that you can access the serial port.
+import sys
 import arduino_connect
 
 
 # Codes for the 4 signals sent to this level from the Arduino
-
 _dot = 1
 _dash = 2
 _mpause = 3
@@ -65,9 +56,14 @@ class mocoder():
     }
 
     # This is where you set up the connection to the serial port.
-    def __init__(self, sport=True):
-        if sport:
+    # If no port is given when initiating, e.g. mocoder(arport=some_port),
+    # self.serial_port defaults to '/dev/ttyUSB0' (the default device dev path
+    # on linux)
+    def __init__(self, sport=None):
+        if sport is None:
             self.serial_port = arduino_connect.basic_connect()
+        else:
+            self.serial_port = arduino_connect.basic_connect(arport=sport)
         self.reset()
 
     def reset(self):
@@ -129,6 +125,18 @@ class mocoder():
                 self.process_signal(int(chr(byte)))
 
 
-if __name__ == '__main__':
-    m = mocoder()
+# Run this program with either just:
+#           python3 morse.py
+# to use the default serial port '/dev/ttyUSB0'.
+# Alternatively, to use a different serial porty:
+#           python4 morse.py <serial_port>
+def main():
+    port = None
+    if (len(sys.argv[1:]) == 1):  # Check for arg
+        port = sys.argv[1]
+    m = mocoder(sport=port)
     m.decoding_loop()
+
+
+if __name__ == '__main__':
+    main()
