@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 import random
 import matplotlib.pyplot as plt
 
@@ -9,23 +10,28 @@ _RAND = 0
 _SEQ = 1
 _HIST = 2
 _FREQ = 3
+_OTP = 4
 
 
-class player():
+class Player():
+
     def __init__(self, play_style=0, hist=0):
 
         # Choose a class to make action choices
         if play_style == _RAND:
-            self.player_style = rand()
+            self.player_style = Rand()
 
         elif play_style == _SEQ:
-            self.player_style = seq()
+            self.player_style = Seq()
 
         elif play_style == _HIST:
-            self.player_style = history(hist_size=hist)
+            self.player_style = History(hist_size=hist)
 
         elif play_style == _FREQ:
-            self.player_style = freq()
+            self.player_style = Freq()
+
+        elif play_style == _OTP:
+            self.player_style = OneTrickPony()
 
         self.score = 0
 
@@ -33,8 +39,8 @@ class player():
 
         # If the player_style is history or freq, update the list of the
         # oppenents moves
-        if (isinstance(self.player_style, history)
-                or isinstance(self.player_style, freq)):
+        if (isinstance(self.player_style, History)
+                or isinstance(self.player_style, Freq)):
             self.player_style.add_opp_move(int(opp_move))
 
         if winner is None:
@@ -47,7 +53,7 @@ class player():
 
     def choose_action(self):
         move = self.player_style.make_move()
-        return action(move)
+        return Action(move)
 
     def get_score(self):
         return self.score
@@ -57,7 +63,22 @@ class player():
         self.player_style.reset()
 
 
-class rand():
+# Abstract class  with methods that all the player style classes most implement
+class PlayerStyle(ABC):
+    @abstractmethod
+    def make_move(self):
+        pass
+
+    @abstractmethod
+    def get_name(self):
+        pass
+
+    @abstractmethod
+    def reset(self):
+        pass
+
+
+class Rand(PlayerStyle):
     def make_move(self):
         return random.randint(0, 2)
 
@@ -65,10 +86,10 @@ class rand():
         return "Random"
 
     def reset(self):
-        return
+        pass
 
 
-class seq():
+class Seq(PlayerStyle):
     def __init__(self):
         self.loop_count = 0
 
@@ -83,7 +104,7 @@ class seq():
         self.loop_count = 0
 
 
-class freq():
+class Freq(PlayerStyle):
     def __init__(self):
         self.move_count = [0, 0, 0]
 
@@ -103,7 +124,7 @@ class freq():
         self.move_count = [0, 0, 0]
 
 
-class history():
+class History(PlayerStyle):
     def __init__(self, hist_size=0):
         self.opp_hist = []
         self.hist_size = hist_size
@@ -115,7 +136,7 @@ class history():
 
         else:
             # Get the <hist_size> last moves done by the opponent
-            last_moves = self.opp_hist[len(self.opp_hist) - self.hist_size:]
+            last_moves = self.opp_hist[-self.hist_size:]
 
             # Count of how many times the moves came after these last moves
             # previously
@@ -123,7 +144,7 @@ class history():
 
             # Loop through the history to find slices equal to <last_moves>
             for i in range(len(self.opp_hist) - self.hist_size - 1):
-                if self.opp_hist[i:i+self.hist_size] == last_moves:
+                if self.opp_hist[i:i+self.hist_size+1] == last_moves:
                     next_move = self.opp_hist[i+self.hist_size+1]
                     move_count[next_move] += 1
 
@@ -142,7 +163,22 @@ class history():
         self.opp_hist = []
 
 
-class action():
+class OneTrickPony(PlayerStyle):
+    def __init__(self):
+        self.move = random.randint(0, 2)
+
+    def make_move(self):
+        return self.move
+
+    def get_name(self):
+        move_name = str(Action(self.move))
+        return "OneTrickPony({})".format(move_name)
+
+    def reset(self):
+        pass
+
+
+class Action():
     def __init__(self, move=None):
         self.move = move
 
@@ -173,13 +209,21 @@ class action():
         return self.move
 
 
-class single_game():
+class SingleGame():
     def __init__(self, p1, p2):
         self.p1 = p1
         self.p2 = p2
         self.p1_move = None
         self.p2_move = None
         self.winner = None
+
+    def __str__(self):
+        wname = self.winner.get_name() if self.winner is not None else "None"
+        return ('{}: '.format(self.p1.get_name()) +
+                '{}, '.format(str(self.p1_move).ljust(12)) +
+                '{}: '.format(self.p2.get_name()) +
+                '{}, '.format(str(self.p2_move).ljust(12)) +
+                '-> Winner: {}\n'.format(wname))
 
     def play(self):
         self.p1_move = self.p1.choose_action()
@@ -208,23 +252,15 @@ class single_game():
             return self.p1
         return self.p2
 
-    def __str__(self):
-        wname = self.winner.get_name() if self.winner is not None else "None"
-        return ('{}: '.format(self.p1.get_name()) +
-                '{}, '.format(str(self.p1_move).ljust(12)) +
-                '{}: '.format(self.p2.get_name()) +
-                '{}, '.format(str(self.p2_move).ljust(12)) +
-                '-> Winner: {}\n'.format(wname))
 
-
-class multiple_games():
+class MultipleGames():
     def __init__(self, p1=None, p2=None, num_games=1):
         self.p1 = p1
         self.p2 = p2
         self.num_games = num_games
 
     def arrange_single_game(self):
-        game = single_game(p1, p2)
+        game = SingleGame(p1, p2)
         game.play()
 
     def arrange_tournament(self):
@@ -250,7 +286,7 @@ class multiple_games():
 
 
 if __name__ == '__main__':
-    p1 = player(play_style=_HIST, hist=2)
-    p2 = player(play_style=_SEQ)
-    games = multiple_games(p1, p2, num_games=100)
+    p1 = Player(play_style=_HIST, hist=2)
+    p2 = Player(play_style=_FREQ)
+    games = MultipleGames(p1, p2, num_games=100)
     games.arrange_tournament()
