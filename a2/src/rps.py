@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 import random
-import re
+import argparser as ap
 import sys
 import matplotlib.pyplot as plt
 
@@ -16,7 +16,6 @@ _OTP = 4
 
 
 class Player():
-
     def __init__(self, play_style=_RAND, hist=0):
 
         # Choose a class to make action choices
@@ -38,7 +37,6 @@ class Player():
         self.score = 0
 
     def get_result(self, my_move=None, opp_move=None, winner=None):
-
         # If the player_style is history or freq, update the list of the
         # oppenents moves
         if (isinstance(self.player_style, History)
@@ -65,8 +63,11 @@ class Player():
         self.player_style.reset()
 
 
-# Abstract class  with methods that all the player style classes most implement
 class PlayerStyle(ABC):
+    """
+    Abstract class  with methods that all the player style classes most
+    implement
+    """
     @abstractmethod
     def make_move(self):
         pass
@@ -114,7 +115,7 @@ class Freq(PlayerStyle):
         if self.move_count == [0, 0, 0]:
             return random.randint(0, 2)
 
-        return (self.move_count.index(max(self.move_count)) + 1) % 3
+        return (self.move_count.index(max(self.move_count)) - 1) % 3
 
     def add_opp_move(self, opp_move):
         self.move_count[int(opp_move)] += 1
@@ -146,14 +147,14 @@ class History(PlayerStyle):
 
             # Loop through the history to find slices equal to <last_moves>
             for i in range(len(self.opp_hist) - self.hist_size - 1):
-                if self.opp_hist[i:i+self.hist_size+1] == last_moves:
-                    next_move = self.opp_hist[i+self.hist_size+1]
+                if self.opp_hist[i:i+self.hist_size] == last_moves:
+                    next_move = self.opp_hist[i+self.hist_size]
                     move_count[next_move] += 1
 
             # The index of the max value in move_count will be the move most
             # often done after the last_moves -> return the move that beats
             # this move:
-            return (move_count.index(max(move_count)) + 1) % 3
+            return (move_count.index(max(move_count)) - 1) % 3
 
     def add_opp_move(self, opp_move):
         self.opp_hist += [opp_move]
@@ -220,7 +221,7 @@ class SingleGame():
         self.winner = None
 
     def __str__(self):
-        wname = self.winner.get_name() if self.winner is not None else "None"
+        wname = self.winner.get_name() if self.winner else "None"
         return ('{}: '.format(self.p1.get_name()) +
                 '{}, '.format(str(self.p1_move).ljust(12)) +
                 '{}: '.format(self.p2.get_name()) +
@@ -262,7 +263,7 @@ class MultipleGames():
         self.num_games = num_games
 
     def arrange_single_game(self):
-        game = SingleGame(p1, p2)
+        game = SingleGame(self.p1, self.p2)
         game.play()
 
     def arrange_tournament(self):
@@ -273,6 +274,8 @@ class MultipleGames():
             averages += [curr_average]
 
         self.plot_game(averages)
+        self.p1.reset()
+        self.p2.reset()
 
     def plot_game(self, averages):
         plt.plot(list(range(self.num_games)), averages)
@@ -283,29 +286,6 @@ class MultipleGames():
         plt.axhline(y=0.5, linestyle='dotted', color='black')
         plt.grid()
         plt.show()
-        self.p1.reset()
-        self.p2.reset()
-
-
-def parse_args(arg):
-    types = {
-        "rand": _RAND,
-        "seq": _SEQ,
-        "freq": _FREQ,
-        "otp": _OTP
-    }
-
-    hsize = 0
-    pstyle = _RAND
-
-    x = re.match(r'hist\((\d*)\)', arg.lower())
-    if x is not None:
-        hsize = int(x.group(1))  # Get hsize captured in regex
-        pstyle = _HIST
-    elif arg.lower() in types.keys():
-        pstyle = types.get(arg.lower())
-
-    return Player(play_style=pstyle, hist=hsize)
 
 
 """
@@ -313,12 +293,14 @@ Run this program vith either:
 
         python rps.py
 
-to use the default player styles. To choose player style of the two players,
-pass in two args:
+to use the default player styles playing 100 rounds.
 
-        python rps.py "<play_style_1>" "<play_style_2>"
+To choose player style of the two players and number of round, pass in three
+args:
 
-The args can be the following:
+        python rps.py "<play_style_1>" "<play_style_2>" <number_of_games>
+
+The play styles can be the following:
 
         "Rand"            :       Chooses random
         "Seq"             :       Chooses sequentially
@@ -328,11 +310,20 @@ The args can be the following:
 """
 
 if __name__ == '__main__':
-    if (len(sys.argv) == 3):
-        p1 = parse_args(sys.argv[1])
-        p2 = parse_args(sys.argv[2])
+    ngames = 100
+    if (len(sys.argv) >= 3):
+        p1_pstyle, p1_hsize = ap.parse_args(sys.argv[1])
+        p2_pstyle, p2_hsize = ap.parse_args(sys.argv[2])
+
+        p1 = Player(play_style=p1_pstyle, hist=p1_hsize)
+        p2 = Player(play_style=p2_pstyle, hist=p2_hsize)
+
+    if (len(sys.argv) == 4):
+        ngames = int(sys.argv[3])
+
     else:
         p1 = Player(play_style=_HIST, hist=2)
-        p2 = Player(play_style=_FREQ)
-    games = MultipleGames(p1, p2, num_games=100)
+        p2 = Player(play_style=_SEQ)
+
+    games = MultipleGames(p1, p2, num_games=ngames)
     games.arrange_tournament()
