@@ -1,27 +1,27 @@
-import re
+"""
+Helper for parsing of arguments
+"""
 
-_RAND = 0
-_SEQ = 1
-_HIST = 2
-_FREQ = 3
-_OTP = 4
+import re
 
 
 def parse_args(arg):
+    """ Parse the arguments passes to the program"""
     types = {
-        "rand": _RAND,
-        "seq": _SEQ,
-        "freq": _FREQ,
-        "otp": _OTP
+        "rand": 0,
+        "seq": 1,
+        "hist": 2,
+        "freq": 3,
+        "otp": 4
     }
 
     hsize = 0
-    pstyle = _RAND
+    pstyle = 0
 
-    x = re.match(r'hist\((\d*)\)', arg.lower())
-    if x is not None:
-        hsize = int(x.group(1))  # Get hsize captured in regex
-        pstyle = _HIST
+    reg_match = re.match(r'hist\((\d*)\)', arg.lower())
+    if reg_match is not None:
+        hsize = int(reg_match.group(1))  # Get hsize captured in regex
+        pstyle = types.get("hist")
     elif arg.lower() in types.keys():
         pstyle = types.get(arg.lower())
 
