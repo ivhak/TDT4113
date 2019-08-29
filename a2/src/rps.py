@@ -289,24 +289,43 @@ class MultipleGames():
 
 def parse_args(arg):
     types = {
-            "rand": _RAND,
-            "seq": _SEQ,
-            "freq": _FREQ,
-            "otp": _OTP
-            }
+        "rand": _RAND,
+        "seq": _SEQ,
+        "freq": _FREQ,
+        "otp": _OTP
+    }
 
     hsize = 0
     pstyle = _RAND
 
     x = re.match(r'hist\((\d*)\)', arg.lower())
     if x is not None:
-        hsize = int(x.group(1))
+        hsize = int(x.group(1))  # Get hsize captured in regex
         pstyle = _HIST
     elif arg.lower() in types.keys():
         pstyle = types.get(arg.lower())
 
     return Player(play_style=pstyle, hist=hsize)
 
+
+"""
+Run this program vith either:
+
+        python rps.py
+
+to use the default player styles. To choose player style of the two players,
+pass in two args:
+
+        python rps.py "<play_style_1>" "<play_style_2>"
+
+The args can be the following:
+
+        "Rand"            :       Chooses random
+        "Seq"             :       Chooses sequentially
+        "Hist(<digit>)"   :       Uses a history of length <digit>
+        "Freq"            :       Uses the frequency of moves used by opponent
+        "OTP"             :       Uses a single move
+"""
 
 if __name__ == '__main__':
     if (len(sys.argv) == 3):
