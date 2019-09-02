@@ -1,31 +1,12 @@
 '''
-This program simulates tournaments of Rock Paper Scissors between two players,
-using different techniques
-
-
-Run this program with either:
-
-        python rps.py
-
-to use the default player styles playing 100 rounds.
-
-To choose player style of the two players and number of round, pass in three
-args:
-
-        python rps.py "<play_style_1>" "<play_style_2>" <number_of_games>
-
-The play styles can be the following:
-
-        "Rand"            :       Chooses random
-        "Seq"             :       Chooses sequentially
-        "Hist(<digit>)"   :       Uses a history of length <digit>
-        "Freq"            :       Uses the frequency of moves used by opponent
-        "OTP"             :       Uses a single move
+Simulate rounds of Rock, Paper, Scissors
 '''
 
 from abc import ABC, abstractmethod
+import getopt
 import random
 import sys
+import os
 import matplotlib.pyplot as plt
 import argparser as ap
 
@@ -41,7 +22,10 @@ _OTP = 4
 
 
 class Player():
-    ''' Class representing a player with a given play style '''
+    '''
+    Class representing a player with a given play style
+    '''
+
     def __init__(self, play_style=_RAND, hist=0):
 
         # Choose a class to make action choices
@@ -89,7 +73,7 @@ class Player():
         return self.score
 
     def reset(self):
-        ''' Reset everything after a game/tournament '''
+        ''' Reset modified values after a tournament '''
         self.score = 0
         self.player_style.reset()
 
@@ -109,11 +93,14 @@ class PlayerStyle(ABC):
 
     @abstractmethod
     def reset(self):
-        ''' Reset modified values after a game/tournament '''
+        ''' Reset modified values after a tournament '''
 
 
 class Rand(PlayerStyle):
-    ''' Select a move randomly each time '''
+    '''
+    Select a move randomly each time
+    '''
+
     def make_move(self):
         return random.randint(0, 2)
 
@@ -125,7 +112,10 @@ class Rand(PlayerStyle):
 
 
 class Seq(PlayerStyle):
-    ''' Play each move sequentially: rock, paper, scissors, rock, paper... '''
+    '''
+    Play each move sequentially: rock, paper, scissors, rock, paper...
+    '''
+
     def __init__(self):
         self.loop_count = 0
 
@@ -141,7 +131,10 @@ class Seq(PlayerStyle):
 
 
 class Freq(PlayerStyle):
-    ''' Choose the opposite move of the opponents most frequent move '''
+    '''
+    Choose the opposite move of the opponents most frequent move
+    '''
+
     def __init__(self):
         self.move_count = [0, 0, 0]
 
@@ -149,6 +142,8 @@ class Freq(PlayerStyle):
         if self.move_count == [0, 0, 0]:
             return random.randint(0, 2)
 
+        # The index of the max value in move_count will be the move most often
+        # done by the opponent -> return the move that beats this move:
         return (self.move_count.index(max(self.move_count)) - 1) % 3
 
     def add_opp_move(self, opp_move):
@@ -167,6 +162,7 @@ class History(PlayerStyle):
     Keep a list of the opponents moves and check for the historically most
     likely move base on the hist_size last moves.
     '''
+
     def __init__(self, hist_size=0):
         self.opp_hist = []
         self.hist_size = hist_size
@@ -183,15 +179,15 @@ class History(PlayerStyle):
         # previously
         move_count = [0, 0, 0]
 
-        # Loop through the history to find slices equal to <last_moves>
+        # Loop through the history to find slices equal to <last_moves>, add
+        # the move after a matching slice to move_count
         for i in range(len(self.opp_hist) - self.hist_size - 1):
             if self.opp_hist[i:i+self.hist_size] == last_moves:
                 next_move = self.opp_hist[i+self.hist_size]
                 move_count[next_move] += 1
 
-        # The index of the max value in move_count will be the move most
-        # often done after the last_moves -> return the move that beats
-        # this move:
+        # The index of the max value in move_count will be the move most often
+        # done after the last_moves -> return the move that beats this move:
         return (move_count.index(max(move_count)) - 1) % 3
 
     def add_opp_move(self, opp_move):
@@ -206,7 +202,10 @@ class History(PlayerStyle):
 
 
 class OneTrickPony(PlayerStyle):
-    ''' Dumbest strategy. Pick one move and stick to it '''
+    '''
+    Dumbest strategy. Pick one move and stick to it
+    '''
+
     def __init__(self):
         self.move = random.randint(0, 2)
 
@@ -222,7 +221,10 @@ class OneTrickPony(PlayerStyle):
 
 
 class Action():
-    ''' Class for representation of the moves in RPS '''
+    '''
+    Class for representation of the moves in RPS
+    '''
+
     def __init__(self, move=None):
         self.move = move
 
@@ -253,7 +255,10 @@ class Action():
 
 
 class SingleGame():
-    ''' Play a single game of RPS with two players '''
+    '''
+    Play a single game of RPS with two players
+    '''
+
     def __init__(self, p_1, p_2):
         self.p_1 = p_1
         self.p_2 = p_2
@@ -264,9 +269,9 @@ class SingleGame():
     def __str__(self):
         wname = self.winner.get_name() if self.winner else 'None'
         return ('{}: '.format(self.p_1.get_name()) +
-                '{}, '.format(str(self.p_1_move).ljust(12)) +
+                '{}'.format(str(self.p_1_move).ljust(12)) +
                 '{}: '.format(self.p_2.get_name()) +
-                '{}, '.format(str(self.p_2_move).ljust(12)) +
+                '{}'.format(str(self.p_2_move).ljust(12)) +
                 '-> Winner: {}\n'.format(wname))
 
     def play(self):
@@ -291,10 +296,7 @@ class SingleGame():
             self.p_2.get_result(self.p_1_move, winner=1)
 
     def get_winner(self, player1_move, player2_move):
-        '''
-        Find out who won the round and return the winner. Return None if it is
-        a tie
-        '''
+        ''' Return the winner, None if it is a tie '''
         if player1_move == player2_move:
             return None
         if player1_move > player2_move:
@@ -303,16 +305,23 @@ class SingleGame():
 
 
 class MultipleGames():
-    ''' Class to represent multiple games '''
-    def __init__(self, p1=None, p_2=None, num_games=1):
+    '''
+    Class to represent multiple games
+    '''
+
+    def __init__(self, p1=None, p_2=None, **kwargs):
         self.p_1 = p1
         self.p_2 = p_2
-        self.num_games = num_games
+        self.num_games = kwargs.get('num_games', 100)
+        self.print_games = kwargs.get('print_games', False)
+        self.plot_games = kwargs.get('plot', False)
 
     def arrange_single_game(self):
         ''' Arrange a single game '''
         game = SingleGame(self.p_1, self.p_2)
         game.play()
+        if self.print_games:
+            print(game)
 
     def arrange_tournament(self):
         ''' Arrange a tournament with num_games rounds '''
@@ -322,7 +331,15 @@ class MultipleGames():
             curr_average = self.p_1.get_score() / i
             averages += [curr_average]
 
-        self.plot_game(averages)
+        if self.plot_games:
+            self.plot_game(averages)
+
+        if self.print_games:
+            print("Total points:")
+            print("{}: {}".format(self.p_1.get_name().rjust(25),
+                                  self.p_1.score))
+            print("{}: {}".format(self.p_2.get_name().rjust(25),
+                                  self.p_2.score))
         self.p_1.reset()
         self.p_2.reset()
 
@@ -338,21 +355,77 @@ class MultipleGames():
         plt.show()
 
 
-if __name__ == '__main__':
-    NGAMES = 100
-    if len(sys.argv) >= 3:
-        P1_PSTYLE, P1_HSIZE = ap.parse_args(sys.argv[1])
-        P2_PSTYLE, P2_HSIZE = ap.parse_args(sys.argv[2])
+def usage():
+    '''
+    Print usage
+    '''
+    return '''Usage: python {0} [OPTS] "<P1>" "<P2>"
+Options:
+        -n <num_games> :  Play <num_games> rounds. Defaults to 100
+        -p             :  Print each round
+        -P             :  Plot P1's average score against P2
+        -h             :  Print help (this)
 
-        P1 = Player(play_style=P1_PSTYLE, hist=P1_HSIZE)
-        P2 = Player(play_style=P2_PSTYLE, hist=P2_HSIZE)
+If P1 and P2 are not supplied, P1 defaults to Hist(2), and P2 defaults to Seq.
+P1 and P2 can be any of the following:
 
-    if len(sys.argv) == 4:
-        NGAMES = int(sys.argv[3])
+        Rand           :  Choose a random move each time
+        Seq            :  Choose move sequentially; R, P, S, R, P, S, ...
+        Hist(<number>) :  Keep a history, search, optimize
+        Freq           :  Counter opponents most frequent move
+        OTP            :  One Trick Pony, choose one move, stick to it
 
+For example, to simulate a 100 round tournament between Seq and Freq, both
+printed and plotted:
+
+        python {0} -pP -n 100 "Freq" "Seq"
+    '''.format(os.path.basename(__file__))
+
+
+def main():
+    """
+    Play RPS
+    """
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], "n:pPh", [
+            "numgames=", "print", "plot", "help"
+        ])
+    except getopt.GetoptError as err:
+        print(str(err))
+        print(usage())
+        sys.exit(2)
+
+    ngames = 100
+    printg = False
+    plot = False
+    for opt, arg in opts:
+        if opt in ("-n", "--numgames"):
+            ngames = int(arg)
+        elif opt in ("-p", "--print"):
+            printg = True
+        elif opt in ("-P", "--plot"):
+            plot = True
+        elif opt in ("-h", "--help"):
+            print(usage())
+            sys.exit(0)
+
+    if len(args) == 2:
+        p1_pstyle, p1_hsize = ap.parse_args(args[0])
+        p2_pstyle, p2_hsize = ap.parse_args(args[1])
+
+        p_1 = Player(play_style=p1_pstyle, hist=p1_hsize)
+        p_2 = Player(play_style=p2_pstyle, hist=p2_hsize)
     else:
-        P1 = Player(play_style=_HIST, hist=2)
-        P2 = Player(play_style=_SEQ)
+        p_1 = Player(play_style=_HIST, hist=2)
+        p_2 = Player(play_style=_SEQ)
 
-    GAMES = MultipleGames(P1, P2, num_games=NGAMES)
-    GAMES.arrange_tournament()
+    games = MultipleGames(p_1, p_2,
+                          num_games=ngames,
+                          print_games=printg,
+                          plot=plot)
+
+    games.arrange_tournament()
+
+
+if __name__ == '__main__':
+    main()
