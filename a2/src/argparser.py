@@ -6,7 +6,7 @@ import re
 
 
 def parse_args(arg):
-    ''' Parse the arguments passes to the program'''
+    ''' Parse the arguments passed to the program'''
     types = {
         "rand": 0,
         "seq": 1,
