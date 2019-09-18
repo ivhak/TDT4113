@@ -1,5 +1,5 @@
 '''
-Wrappers for functions and operands used in calculator
+Wrappers for functions and operators used in calculator
 '''
 import numbers
 
@@ -61,12 +61,12 @@ class Operator():
         # Check type of first element
         if not isinstance(first_elem, numbers.Number):
             raise TypeError(
-                'Cannot execut operator, {first_elem} is not a number')
+                'Cannot execute operator, {first_elem} is not a number')
 
         # Check type of second element
         if not isinstance(second_elem, numbers.Number):
             raise TypeError(
-                'Cannot execut operator, {second_elem} is not a number')
+                'Cannot execute operator, {second_elem} is not a number')
 
         result = self.operation(first_elem, second_elem)
 

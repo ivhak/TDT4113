@@ -65,9 +65,9 @@ class Calculator():
 
     def generate_output_queue(self, input_list):
         '''
-        Converts a list of operators, functions, operands and parentheses from
-        infix notation to reverse polish notation using the shunting-yard
-        algorithm
+        Converts a list of operators, functions, operands, constants and
+        parentheses from infix notation to reverse polish notation using the
+        shunting-yard algorithm
         '''
 
         self.output_queue = Queue()
@@ -91,11 +91,11 @@ class Calculator():
 
     def parse_string_to_list(self, input_str):
         '''
-        Parse input_str into a list of operators, operands, parentheses and
-        functions, using regular expressions. Then substitute the functions and
-        operand found with their corresponding Function/Operand object. Strings
-        in the form of positive or negative ints or floats are converted to
-        float.
+        Parse input_str into a list of operators, operands, parentheses,
+        constants and functions, using regular expressions. Then substitute the
+        functions and operators found with their corresponding wrapper object.
+        Strings in the form of positive or negative integers/floats are
+        converted to float.
         '''
 
         float_re = r'-?\d+\.\d+'
@@ -126,7 +126,7 @@ class Calculator():
                 result += [self.constants[match]]
 
             # Parentheses
-            elif match in '()':
+            elif match in ('(', ')'):
                 result += [match]
 
             # Probably a number
@@ -151,7 +151,7 @@ def main():
             arg_list = calc.parse_string_to_list(equation)
             calc.generate_output_queue(arg_list)
             res = calc.calculate()
-            print(f'{equation} = {res}')
+            print(f'  {equation} = {res}')
         except KeyboardInterrupt:
             sys.exit(0)
 

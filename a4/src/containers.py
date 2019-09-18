@@ -50,7 +50,7 @@ class Queue(Container):
 
 class Stack(Container):
     '''
-    Implemntation of a stack
+    Implementation of a stack
     '''
 
     def pop(self):
