@@ -137,7 +137,3 @@ class TestCalculator(unittest.TestCase):
         calc.generate_output_queue(arg_list)
         res = calc.calculate()
         self.assertAlmostEqual(-1.0, res)
-
-
-
-
