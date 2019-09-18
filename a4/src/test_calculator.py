@@ -1,7 +1,7 @@
 import unittest
 import math
-import calculator
 import numpy as np
+import calculator
 
 
 class TestContainer(unittest.TestCase):

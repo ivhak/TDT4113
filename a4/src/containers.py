@@ -7,6 +7,7 @@ class Container:
     '''
     Super class for the different containers
     '''
+    __slots__ = ['_items']
 
     def __init__(self):
         self._items = []

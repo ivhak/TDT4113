@@ -8,6 +8,7 @@ class Function():
     '''
     Wrapper for functions that operate on a single element
     '''
+    __slots__ = ['func']
 
     def __init__(self, func):
         self.func = func
@@ -39,6 +40,7 @@ class Operator():
     '''
     Wrapper for operators that operate on two elements
     '''
+    __slots__ = ['operation', 'strength']
 
     def __init__(self, operation=None, strength=0):
         self.operation = operation
