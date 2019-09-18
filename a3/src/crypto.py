@@ -155,7 +155,7 @@ class Unbreakable(Cypher):
 
 class RSA(Cypher):
     '''
-    Prime numbers are sick bro!
+    Encrypt/decrypt using RSA
     '''
 
     def decode(self, text, key):
@@ -247,7 +247,7 @@ class Hacker(Reciever):
         with open(f, 'r') as word_file:
             self.words = {line.rstrip('\n') for line in word_file}
 
-    def operate_cypher(self, text: str) -> str:
+    def operate_cypher(self, text: str) -> set[str]:
         '''
         Bruteforce decode cypher
         '''
