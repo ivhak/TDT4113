@@ -24,20 +24,21 @@ class Calculator():
             'LOG': Function(np.log),
             'SIN': Function(np.sin),
             'COS': Function(np.cos),
-            'SQRT': Function(np.sqrt)
+            'SQRT': Function(np.sqrt),
+            'ABS': Function(np.abs)
         }
 
         self.constants = {
             'PI': math.pi,
-            'TAU': math.tau
+            'TAU': math.tau,
+            'E': math.e
         }
 
         self.operators = {
-            '+': Operator(np.add),
-            '-': Operator(np.subtract),
-            '/': Operator(np.divide),
-            '^': Operator(np.power),
-            '*': Operator(np.multiply)
+            '+': Operator(np.add, strength=0),
+            '~': Operator(np.subtract, strength=0),
+            '/': Operator(np.divide, strength=1),
+            '*': Operator(np.multiply, strength=1),
         }
 
         self.output_queue = Queue()
@@ -69,16 +70,42 @@ class Calculator():
         parentheses from infix notation to reverse polish notation using the
         shunting-yard algorithm
         '''
+        def operator_precedence(top, elem):
+            '''
+            Function to determine wether to pop from op_stack
+            '''
+            precedence = False
+            precedence |= isinstance(top, Function)
+            if isinstance(top, Operator):
+                precedence |= top.strength >= elem.strength
+            precedence &= top != '('
+
+            return precedence
 
         self.output_queue = Queue()
         op_stack = Stack()
+
         for elem in input_list:
             if isinstance(elem, numbers.Number):
                 self.output_queue.push(elem)
-            if isinstance(elem, (Function, Operator)):
+
+            if isinstance(elem, Function):
                 op_stack.push(elem)
+
+            if isinstance(elem, Operator):
+                if not op_stack.is_empty():
+                    top = op_stack.peek()
+                    while top is not None and operator_precedence(top, elem):
+                        self.output_queue.push(op_stack.pop())
+                        if not op_stack.is_empty():
+                            top = op_stack.peek()
+                        else:
+                            top = None
+                op_stack.push(elem)
+
             if elem == '(':
                 op_stack.push(elem)
+
             if elem == ')':
                 next_op = op_stack.pop()
                 while next_op != '(':
@@ -101,12 +128,12 @@ class Calculator():
         float_re = r'-?\d+\.\d+'
         int_re = r'-?\d+'
         paren_re = r'\(|\)'
-        operator_re = r'\^|\+|\-|\*|/|'
-        constans_re = '|'.join(self.constants.keys())
+        operator_re = r'\+|\~|\*|/|'
+        constants_re = '|'.join(self.constants.keys())
         fun_re = '|'.join(self.functions.keys())
 
         regex = '|'.join([float_re, int_re, paren_re,
-                          operator_re, constans_re, fun_re])
+                          operator_re, fun_re, constants_re])
 
         # re.findall preserves the order of the matches
         matches = re.findall(regex, input_str.upper())
@@ -134,7 +161,7 @@ class Calculator():
                 try:
                     result += [float(match)]
                 except ValueError:
-                    result += [match]
+                    pass
 
         return result
 
@@ -144,9 +171,10 @@ def main():
     Run the interactive calculator
     '''
     calc = Calculator()
+    print('Disclaimer: The operator minus is written as "~"')
+    print('Enter an equation')
     while True:
         try:
-            print('Enter an equation')
             equation = input('> ')
             arg_list = calc.parse_string_to_list(equation)
             calc.generate_output_queue(arg_list)

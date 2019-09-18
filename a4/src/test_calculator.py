@@ -76,14 +76,14 @@ class TestOperator(unittest.TestCase):
 
 class TestCalculator(unittest.TestCase):
 
-    def test_operators(self):
+    def test_operators_single(self):
         calc = calculator.Calculator()
         self.assertEqual(2, calc.operators['+'].execute(1, 1))
-        self.assertEqual(1, calc.operators['-'].execute(2, 1))
+        self.assertEqual(1, calc.operators['~'].execute(2, 1))
         self.assertEqual(8, calc.operators['*'].execute(2, 4))
         self.assertEqual(2, calc.operators['/'].execute(8, 4))
 
-    def test_functions(self):
+    def test_functions_single(self):
         calc = calculator.Calculator()
         self.assertAlmostEqual(
             0.0, calc.functions['COS'].execute(math.pi/2))
@@ -97,7 +97,7 @@ class TestCalculator(unittest.TestCase):
         self.assertAlmostEqual(
             2.0, calc.functions['SQRT'].execute(4))
 
-    def test_calculate(self):
+    def test_generate_queue_1(self):
         calc = calculator.Calculator()
         _input = [
             1, 2, 3, calc.operators['*'],
@@ -109,7 +109,7 @@ class TestCalculator(unittest.TestCase):
 
         self.assertAlmostEqual(1096.633158428, calc.calculate())
 
-    def test_generate_queue(self):
+    def test_generate_queue_2(self):
         calc = calculator.Calculator()
         _input = [
             calc.functions['EXP'], '(', '(',
@@ -118,22 +118,80 @@ class TestCalculator(unittest.TestCase):
         calc.generate_output_queue(_input)
         self.assertAlmostEqual(1096.633158428, calc.calculate())
 
-    def test_calculator(self):
+    def help_run_test(self, tests):
         calc = calculator.Calculator()
-        _input = '((15 / (7 - (1 + 1))) * 3) - (2 + (1 + 1))'
-        arg_list = calc.parse_string_to_list(_input)
-        calc.generate_output_queue(arg_list)
-        res = calc.calculate()
-        self.assertEqual(5.0, res)
+        for test in tests:
+            arg_list = calc.parse_string_to_list(test[0])
+            calc.generate_output_queue(arg_list)
+            res = calc.calculate()
+            self.assertAlmostEqual(test[1], res)
 
-        _input = 'exp(1 + 2*3)'
-        arg_list = calc.parse_string_to_list(_input)
-        calc.generate_output_queue(arg_list)
-        res = calc.calculate()
-        self.assertAlmostEqual(1096.633158428, res)
+    def test_addition(self):
+        tests = [
+            ('2+2', 4),
+            ('2  +  2', 4),
+            ('2+2.', 4),
+            ('3 + (5 + 1 + (2 + 2))', 13),
+            ('1+2+4+8+16 + 11', 42),
+            ('2.1+2.1', 4.2),
+        ]
+        self.help_run_test(tests)
 
-        _input = 'cos(pi)'
-        arg_list = calc.parse_string_to_list(_input)
-        calc.generate_output_queue(arg_list)
-        res = calc.calculate()
-        self.assertAlmostEqual(-1.0, res)
+    def test_division(self):
+        tests = [
+            ('1/2', 0.5),
+            ('3.885 / 7', 0.555),
+            ('(140/2)/0.5/2', 70),
+            ('((517/4)/2/0.25/0.25)/22', 47),
+            ('2987898/34743', 86),
+        ]
+        self.help_run_test(tests)
+
+    def test_trig(self):
+        tests = [
+            ('cos(pi)', -1.0),
+            ('cos(pi) * sin(pi)', 0.0),
+            ('sin(pi)', 0),
+            ('cos(pi)', -1),
+            ('cos(tau)', 1),
+            ('cos(2*pi)', 1),
+            ('((2*pi / tau) + (10*pi))/(1+10*pi)', 1),
+            ('pi * 2', 6.2831853071796),
+            ('pi * pi', 9.8696044010894),
+            ('2*pi*pi', 19.739208802179),
+        ]
+        self.help_run_test(tests)
+
+    def test_multiplication(self):
+        tests = [
+            ('13 * 2', 26),
+            ('3.2*2', 6.4),
+            ('20*2*1.375', 55),
+            ('0.75*((2*-4)*1.5)', -9),
+            ('27*0.5', 13.5),
+        ]
+        self.help_run_test(tests)
+
+    def test_functions(self):
+        tests = [
+            ("abs(-32)", 32),
+            ("abs(-5~7)", 12),
+            ("abs(-1.1)", 1.1),
+            ("sqrt(100)", 10),
+            ("SqRt(100)", 10),
+            ("sqrt(sqrt(10000))", 10),
+            ("sqrt(sqrt(10000) + 800)", 30),
+            ("log(e)", 1),
+            ("loG(E)", 1),
+        ]
+        self.help_run_test(tests)
+
+    def test_random(self):
+        tests = [
+            ('(6/3)*5', 10.0),
+            ('6+3*2', 12.0),
+            ('((15 / (7 ~ (1 + 1))) * 3) ~ (2 + (1 + 1))', 5.0),
+            ('exp(1 + 2*3)', 1096.633158428),
+            ('12 ~ -3', 15.0),
+        ]
+        self.help_run_test(tests)
