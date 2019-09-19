@@ -18,7 +18,7 @@ class Calculator():
     to reverse polish notation and evaluates the expression.
     '''
 
-    def __init__(self):
+    def __init__(self, debug=False):
         self.functions = {
             'EXP': Function(np.exp),
             'LOG': Function(np.log),
@@ -42,6 +42,8 @@ class Calculator():
         }
 
         self.output_queue = Queue()
+
+        self.debug = debug
 
     def calculate(self):
         '''
@@ -116,6 +118,10 @@ class Calculator():
             elem = op_stack.pop()
             self.output_queue.push(elem)
 
+        if self.debug:
+            print(f'\nParsed string: {input_list}')
+            print(f'Output queue:  {self.output_queue._items}\n')
+
     def parse_string_to_list(self, input_str):
         '''
         Parse input_str into a list of operators, operands, parentheses,
@@ -125,15 +131,16 @@ class Calculator():
         converted to float.
         '''
 
-        float_re = r'-?\d+\.\d+'
-        int_re = r'-?\d+'
-        paren_re = r'\(|\)'
-        operator_re = r'\+|\~|\*|/|'
-        constants_re = '|'.join(self.constants.keys())
-        fun_re = '|'.join(self.functions.keys())
+        re_parts = (
+            r'-?\d+\.\d+',                    # Floating point numbers
+            r'-?\d+',                         # Integers
+            r'\(|\)',                         # Parentheses
+            r'\+|\~|\*|/|',                   # Operators
+            '|'.join(self.functions.keys()),  # Functions
+            '|'.join(self.constants.keys()),  # Constants
+        )
 
-        regex = '|'.join([float_re, int_re, paren_re,
-                          operator_re, fun_re, constants_re])
+        regex = '|'.join(re_parts)
 
         # re.findall preserves the order of the matches
         matches = re.findall(regex, input_str.upper())
@@ -170,7 +177,11 @@ def main():
     '''
     Run the interactive calculator
     '''
-    calc = Calculator()
+
+    debug = False
+    if len(sys.argv) == 2 and sys.argv[1] == "-d":
+        debug = True
+    calc = Calculator(debug=debug)
     print('Disclaimer: The operator minus is written as "~"')
     print('Enter an equation')
     while True:
