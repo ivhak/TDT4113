@@ -2,6 +2,9 @@ from inspect import isfunction
 
 
 class Rule:
+    '''
+    Wrapper for the rules used in the finite state machine.
+    '''
     __slots__ = ['state1', 'state2', 'signal', 'action']
 
     def __init__(self, state1, state2, signal, action):
@@ -11,6 +14,9 @@ class Rule:
         self.action = action
 
     def match(self, state, signal):
+        '''
+        Check if state and signal fulfill the rule.
+        '''
 
         # Check signal first
         if isfunction(self.symbol):
