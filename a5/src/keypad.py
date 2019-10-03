@@ -19,12 +19,13 @@ class keypad:
          GPIO.output(rp, GPIO.HIGH)
          for cp in self.columns: 
              GPIO.input(cp) == GPIO.HIGH
-             return True
+             return [rp, cp]
          GPIO.output(rp, GPIO.LOW)
-     return False
+     return None
  
  def get_next_signal(self):
      do_polling = self.do_polling()
-     while not do_polling:
+     while do_polling == None:
            do_polling = self.do_polling()
      # Gi beskjed til agent om at knapp er trykket ned
+    return do_polling
