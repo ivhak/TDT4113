@@ -7,12 +7,13 @@ class KPC:
 
     def init_passcorde_entry(self):
         self.password_buffer = None
-        if self.keypad.get_next_signal() != None:
-            #skru på masse lys for å indikere at nå starter prosessen
+        if self.keypad.get_next_signal() is not None:
+            self.led_board.flash_leds()
+            # skru på masse lys for å indikere at nå starter prosessen
 
     def get_next_signal(self):
         signal = self.keypad.get_next_signal()
-        if signal != None:
+        if signal is not None:
             self.password_buffer.push(signal)
 
     def verify_login(self):

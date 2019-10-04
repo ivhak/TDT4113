@@ -1,7 +1,7 @@
 import RPi.GPIO as GPIO
 
 
-class keypad:
+class Keypad:
 
     def __init__(self, rows, columns):
         self.rows = rows

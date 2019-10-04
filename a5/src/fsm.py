@@ -2,7 +2,7 @@ from rule import Rule
 from kpc import KPC
 
 
-def any_key_dummy(_):
+def any_dummy(_):
     return True
 
 
@@ -14,8 +14,9 @@ def valid_led(signal):
 
 
 RULES = [
-    ('?',  '?',  valid_led,     KPC.light_one_led)         # Light led <signal>
-    ('s0', 's1', any_key_dummy, KPC.start_password_entry)  # Enter password
+    # state1    state2  signal     action
+    (any_dummy, '?',    valid_led, KPC.light_one_led)         # Light led
+    ('s0',      's1',   any_dummy, KPC.start_password_entry)  # Enter password
 ]
 
 
@@ -35,7 +36,7 @@ class FSM:
 
     def add_rule(self, rule: Rule):
         ''' Add a rule '''
-        self.rules.push(rule)
+        self.rules.append(rule)
 
     def get_next_signal(self):
         ''' Recieve next signal from the agent '''
@@ -63,9 +64,8 @@ class FSM:
 
     def main_loop(self):
         '''
-        Run the finite state machine.
-        While the state is not the default state, get a signal and choose which
-        action to perfom.
+        Run the finite state machine. While the state is not the default
+        state, get a signal and choose which action to perfom.
         '''
         for rule in RULES:
             self.add_rule(*rule)
