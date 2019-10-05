@@ -1,8 +1,13 @@
+'''
+FSM
+'''
+
 from rule import Rule
 from kpc import KPC
 
 
 def any_dummy(_):
+    ''' Dummy function '''
     return True
 
 
@@ -15,8 +20,8 @@ def valid_led(signal):
 
 RULES = [
     # state1    state2  signal     action
-    (any_dummy, '?',    valid_led, KPC.light_one_led)         # Light led
-    ('s0',      's1',   any_dummy, KPC.start_password_entry)  # Enter password
+    (any_dummy, '?', valid_led, KPC.light_one_led)    # Light led
+    ('s0', 's1', any_dummy, KPC.init_password_entry)  # Enter password
 ]
 
 

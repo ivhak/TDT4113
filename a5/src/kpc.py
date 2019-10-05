@@ -5,7 +5,7 @@ class KPC:
         self.led_board = None
         self.password_path = None
 
-    def init_passcorde_entry(self):
+    def init_password_entry(self):
         self.password_buffer = None
         if self.keypad.get_next_signal() is not None:
             self.led_board.flash_leds()

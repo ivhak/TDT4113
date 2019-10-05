@@ -1,3 +1,6 @@
+'''
+Rule
+'''
 from inspect import isfunction
 
 
@@ -10,7 +13,7 @@ class Rule:
     def __init__(self, state1, state2, signal, action):
         self.state1 = state1
         self.state2 = state2
-        self.symbol = signal
+        self.signal = signal
         self.action = action
 
     def match(self, state, signal):
@@ -19,11 +22,11 @@ class Rule:
         '''
 
         # Check signal first
-        if isfunction(self.symbol):
-            if not self.symbol(signal):
+        if isfunction(self.signal):
+            if not self.signal(signal):
                 return False
         else:
-            if self.symbol != signal:
+            if self.signal != signal:
                 return False
 
         # Then check if state matches
