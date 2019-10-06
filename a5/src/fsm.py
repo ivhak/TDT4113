@@ -6,8 +6,8 @@ from rule import Rule
 from kpc import KPC
 
 
-def any_dummy(_):
-    ''' Dummy function '''
+def any_dummy(*_):
+    ''' Dummy function, returns True for all input '''
     return True
 
 
@@ -20,7 +20,7 @@ def valid_led(signal):
 
 RULES = [
     # state1    state2  signal     action
-    (any_dummy, '?', valid_led, KPC.light_one_led)    # Light led
+    (any_dummy, '?', valid_led, KPC.light_one_led),   # Light led
     ('s0', 's1', any_dummy, KPC.init_password_entry)  # Enter password
 ]
 
@@ -72,8 +72,8 @@ class FSM:
         Run the finite state machine. While the state is not the default
         state, get a signal and choose which action to perfom.
         '''
-        for rule in RULES:
-            self.add_rule(*rule)
+        for rule_args in RULES:
+            self.add_rule(Rule(*rule_args))
 
         while self.state != self.default_state:
             self.get_next_signal()
