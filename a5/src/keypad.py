@@ -1,6 +1,10 @@
-import RPi.GPIO as GPIO
+'''
+KEYPAD
+'''
+
 import time
 import sys
+import RPi.GPIO as GPIO
 
 SIG_DICT = {
     (18, 17): '1',
@@ -17,25 +21,29 @@ SIG_DICT = {
     (25, 22): '#',
 }
 
+
 class Keypad:
+    '''
+    For interpretation and translation of keypad input
+    '''
 
     def __init__(self):
         self.rows = [18, 23, 24, 25]
-        self.columns = [17, 27, 22 ]
+        self.columns = [17, 27, 22]
         self.sig_dict = SIG_DICT
 
     def setup(self):
         ''' Setup the keypad '''
         GPIO.setmode(GPIO.BCM)
+        GPIO.setwarnings(False)
         for row_p in self.rows:
             GPIO.setup(row_p, GPIO.OUT)
         for column_p in self.columns:
             GPIO.setup(column_p, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
-    # TODO: Add delay
     def do_polling(self):
         ''' Poll all the keys '''
-        time.sleep(0.1)
+        time.sleep(0.2)
         for row_p in self.rows:
             GPIO.output(row_p, GPIO.HIGH)
             for column_p in self.columns:
@@ -49,16 +57,21 @@ class Keypad:
         do_polling = self.do_polling()
         while do_polling is None:
             do_polling = self.do_polling()
-        # Gi beskjed til agent om at knapp er trykket ned
-        return do_polling
+        return self.sig_dict[do_polling]
 
-if __name__ == '__main__':
-    kp = Keypad()
-    kp.setup()
-    while(1):
+
+def main():
+    ''' Test '''
+    keypad = Keypad()
+    keypad.setup()
+    while True:
         try:
-            print(kp.sig_dict[kp.get_next_signal()])
+            print(keypad.get_next_signal())
         except KeyboardInterrupt:
             GPIO.cleanup()
             sys.exit()
     GPIO.cleanup()
+
+
+if __name__ == '__main__':
+    main()
