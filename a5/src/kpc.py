@@ -4,6 +4,7 @@ class KPC:
         self.keypad = None
         self.led_board = None
         self.password_path = None
+        self.password_buffer = None
 
     def init_password_entry(self):
         self.password_buffer = None
