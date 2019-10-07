@@ -15,7 +15,7 @@ class Keypad:
         for column_p in self.columns:
             GPIO.setup(column_p, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
-    # Må legge inn delay her for å hindre støy
+    # TODO: Må legge inn delay her for å hindre støy
     def do_polling(self):
         ''' Poll all the keys '''
         for row_p in self.rows:

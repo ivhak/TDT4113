@@ -2,8 +2,11 @@
 FSM
 '''
 
-from rule import Rule
 from kpc import KPC
+from collections import namedtuple
+from inspect import isfunction
+
+Rule = namedtuple('Rule', 'state1 state2 signal action')
 
 
 def any_dummy(*_):
@@ -60,7 +63,18 @@ class FSM:
 
     def apply_rule(self, rule: Rule):
         ''' Check if the rule matches '''
-        return rule.match(self.state, self.signal)
+        # Check signal first
+        if isfunction(rule.signal):
+            if not rule.signal(self.signal):
+                return False
+        else:
+            if self.signal != rule.signal:
+                return False
+
+        # Then check if state matches
+        if isfunction(rule.state1):
+            return rule.state1(self.state1)
+        return self.state1 == rule.state1
 
     def fire_rule(self, rule: Rule):
         ''' Apply the action of the matching rule. '''
