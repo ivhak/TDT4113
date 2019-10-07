@@ -1,5 +1,28 @@
 '''
-KEYPAD
+The Raspberry Pi is connected to a keypad with four rows and three columns:
+        +---+---+---+
+        | 1 | 2 | 3 |
+        +---+---+---+
+        | 4 | 5 | 6 |
+        +---+---+---+
+        | 7 | 8 | 9 |
+        +---+---+---+
+        | * | 0 | # |
+        +---+---+---+
+When KPC is queried for a signal, each row and column are polled. If row
+i and column j are HIGH, the value (i,j) is translated to the symbol on
+the keypad, as defined in SIG_DICT.
+
+There are seven connectors to the board, and they are mapped as such
+(from left to right):
+
+        Row 1: R0 -> 18
+        Row 2: R1 -> 23
+        Row 3: R2 -> 24
+        Row 4: R3 -> 25
+        Col 1: R4 -> 17
+        Col 2: R5 -> 27
+        Col 3: R6 -> 22
 '''
 
 import time
@@ -23,9 +46,7 @@ SIG_DICT = {
 
 
 class Keypad:
-    '''
-    For interpretation and translation of keypad input
-    '''
+    ''' Interpret and translate keypad input '''
 
     def __init__(self):
         self.rows = [18, 23, 24, 25]
@@ -61,7 +82,7 @@ class Keypad:
 
 
 def main():
-    ''' Test '''
+    ''' Test  keypad '''
     keypad = Keypad()
     keypad.setup()
     while True:
