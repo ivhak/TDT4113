@@ -6,3 +6,4 @@ Assignments in TDT4113
 * [Assignment 3: Cryptography](a3/a3.pdf)
 * [Assignment 4: Calculator](a4/a4.pdf)
 * [Assignment 5: Keypad](a5/a5.pdf)
+* [Assignment 5: Robot](a6/a6.pdf)
