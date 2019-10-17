@@ -1,0 +1,13 @@
+class Sensobs:
+
+    def __init__(self):
+        self.sensors = []
+        self.value = ()
+
+    def update(self):
+        for sensor in self.sensors:
+            self.sensors[sensor] = sensor
+            # fetch verdier
+
+    def get_value(self):
+        return self.value
