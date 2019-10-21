@@ -1,5 +1,6 @@
 """
 BBCON. yoyoyoyo
+Mikkel sier: Har jeg fått det til nå?
 """
 
 
