@@ -47,8 +47,6 @@ class BBCON:
 
         return self.arbitrator.choose_action()
 
-    """hei, prøver en gang til"""
-
 
 
 class Sensobs:
