@@ -1,6 +1,7 @@
 """
 BBCON. yoyoyoyo
 Mikkel sier: Har jeg fått det til nå?
+Giske: jeg lurer på det samme
 """
 
 
@@ -14,24 +15,38 @@ class BBCON:
         self.arbitrator = None
 
     def add_behavior(self, behavior):
+        """append a newly-created behavior onto the behaviors list"""
         if behavior not in self.behaviors:
             self.behaviors.append(behavior)
 
     def add_sensob(self, sensob):
+        """append a newly-created sensob onto the sensobs list"""
         if sensob not in self.sensobs:
             self.sensobs.append(sensob)
 
     def activate_behavior(self, behavior):
+        """add an existing behavior onto the active-behaviors list."""
         if behavior in self.behaviors:
             self.active_behaviors.append(behavior)
 
     def deactivate_behavior(self, behavior):
+        """Remove an existing behavior from the active behaviors list."""
         if behavior in self.active_behaviors:
             self.active_behaviors.remove(behavior)
 
     def run_one_timestep(self):
         for sensob in self.sensobs:
             sensob.update()
+
+        for behav in self.behaviors:
+            behav.update()
+
+    def choose_action(self):
+        """choose a winning be-havior and return that
+        behavior’s motor recommendations and halt request flag"""
+
+        return self.arbitrator.choose_action()
+
 
 
 class Sensobs:
