@@ -47,7 +47,7 @@ class BBCON:
 
         return self.arbitrator.choose_action()
 
-    """hei"""
+    """hei, prøver en gang til"""
 
 
 
