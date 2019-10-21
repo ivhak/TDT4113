@@ -1,7 +1,7 @@
 """
 BBCON. yoyoyoyo
 Mikkel sier: Har jeg fått det til nå?
-Giske: jeg lurer på det samme
+Giske: jeg klarte det!
 """
 
 
