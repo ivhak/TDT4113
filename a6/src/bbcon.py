@@ -77,17 +77,6 @@ class Motob:
         pass
 
 
-class Motors:
-
-    def __init__(self):
-        self.vector = []
-
-    def set_value(self, v):
-        self.vector = v
-
-    def stop(self):
-        self.vector = [0, 0]
-
 
 class Behavior:
 
