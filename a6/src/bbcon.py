@@ -48,17 +48,16 @@ class BBCON:
         return self.arbitrator.choose_action()
 
 
-
 class Sensobs:
 
-    def __init__(self):
-        self.sensors = []
-        self.value = ()
+    def __init__(self, sensors):
+        self.sensors = sensors
+        self.value = []
 
     def update(self):
         for sensor in self.sensors:
-            self.sensors[sensor] = sensor
-            # fetch verdier
+            newValue = sensor.get_value()
+            self.value.append(newValue)
 
     def get_value(self):
         return self.value
@@ -77,7 +76,6 @@ class Motob:
         pass
 
 
-
 class Behavior:
 
     def __init__(self, bbcon, sensobs, motors, flag, pri, degree):
@@ -92,12 +90,12 @@ class Behavior:
 
     def consider_deactivation(self):
         if self.active_flag:
-            #sjekk om den burde bli satt til inactive
+            # sjekk om den burde bli satt til inactive
             self.active_flag = False
 
     def consider_activation(self):
         if not self.active_flag:
-            #Sjekke om burde bli satt til aktiv
+            # Sjekke om burde bli satt til aktiv
             self.active_flag = True
 
     def update(self):
@@ -115,4 +113,3 @@ class Arbitrator:
 
     def choose_action(self):
         return self.actions, self.active
-
