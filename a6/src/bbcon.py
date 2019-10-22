@@ -42,11 +42,14 @@ class BBCON:
         for behav in self.behaviors:
             behav.update()
 
-    def choose_action(self):
+        for motor in self.motobs:
+            motor.update()
+
+    '''def choose_action(self):
         """choose a winning be-havior and return that
         behavior’s motor recommendations and halt request flag"""
 
-        return self.arbitrator.choose_action()
+        return self.arbitrator.choose_action() '''
 
 
 class Sensobs:
@@ -129,6 +132,28 @@ class WhiteFloor(Behavior):
     def __init__(self, bbcon, sensobs, motors, flag, pri=1):
         super().__init__()
 
+    def sense_and_act(self):
+        #Value er en array
+        value = self.sensobs.value
+        maks = 300
+        index = -1
+        for number in value:
+            if number > maks:
+                maks = number
+                index = value[number]
+        degree = maks/2000  # 2000 skal den få veldig høy degree
+        # Da vil vi at roboten skal rygge
+        if index == 0:
+            self.motor_recommendations = motors.right()
+        elif index == 5:
+            self.motor_recommendations = motors.left()
+        elif index == -1:
+            self.motor_recommendations = motors.forward()
+        else:
+            self.motor_recommendations = motors.backward()
+        # Evt halt-req
+        return degree
+
 
 class Avoid(Behavior):
     """Roboten skal unngå hindringer.
@@ -155,6 +180,15 @@ class FindRed(Behavior):
     def __init__(self, bbcon, sensobs, motors, flag, pri=3):
         super().__init__()
 
+    def sense_and_act(self):
+        # Antar vi får inn en RGB = (R, G, B)
+        value = self.sensobs.value
+        red = value[0] - value[1] - value[2]
+        degree = value/255  # 255 er veeeldig rød
+        # Da vil vi at roboten skal rygge
+        self.motor_recommendations = motors.forward() # Kan feks sette farten til maks sånn at vi kjører den røde gjenstanden ned
+        # Evt halt-req
+        return degree
 
 class Arbitrator:
 
