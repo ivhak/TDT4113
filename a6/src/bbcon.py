@@ -3,6 +3,7 @@ BBCON. yoyoyoyo
 Mikkel sier: Har jeg fått det til nå?
 Giske: jeg klarte det!
 """
+import motors
 
 
 class BBCON:
@@ -70,23 +71,27 @@ class Motob:
         self.value = []
 
     def update(self):
-        pass
+        self.motor[0].set_value(self.value[0])
+        self.motor[1].set_value(self.value[1])
 
     def operationalize(self):
         pass
 
+    def set_value(self, value):
+        self.value = value
+
 
 class Behavior:
 
-    def __init__(self, bbcon, sensobs, motors, flag, pri):
+    def __init__(self, bbcon, sensobs, pri):
         self.bbcon = bbcon
         self.sensobs = sensobs
-        self.motor_recommendations = motors
-        self.active_flag = flag
+        self.motor_recommendations = []
+        self.active_flag = False
         self.halt_request = []  # ??
         self.priority = pri
-        self.match_degree = 0
-        self.weight = self.match_degree * pri
+        self.match_degree = 0  # Regnes ut i fra
+        self.weight = 0  # self.match_degree * pri
 
     def consider_deactivation(self):
         if self.active_flag:
@@ -99,15 +104,27 @@ class Behavior:
             self.active_flag = True
 
     def update(self):
-        pass
+        if self.active_flag:
+            self.consider_deactivation()
+        else:
+            self.consider_activation()
+        self.match_degree = self.sense_and_act()
+        self.update_weight()
 
     def sense_and_act(self):
-        pass
+        match_deg = 9
+        return match_deg
+    
+    def update_weight(self):
+        self.weight = self.match_degree *self.priority
 
 
 class WhiteFloor(Behavior):
     """Roboten skal holde seg innenfor de svarte strekene.
     Denne oppførelen har pri = 1"""
+
+    """IR-sensor gir ut en array [0,..., 5], med verdier fra 0-2000. 
+    0 er hvit, og 2000 er svart"""
 
     def __init__(self, bbcon, sensobs, motors, flag, pri=1):
         super().__init__()
@@ -117,8 +134,19 @@ class Avoid(Behavior):
     """Roboten skal unngå hindringer.
     Denne oppførselen har pri = 2"""
 
+    """Antar at høy verdi(600) er nærme"""
+
     def __init__(self, bbcon, sensobs, motors, flag, pri=2):
         super().__init__()
+
+    def sense_and_act(self):
+        value = self.sensobs.value
+        degree = value/600  # Hvis vi antar 600 er veldig nært
+        # Da vil vi at roboten skal rygge
+        self.motor_recommendations = motors.backward()
+        # Evt halt-req
+        return degree
+
 
 class FindRed(Behavior):
     """Roboten skal finne de røde tingene vi har plassert ut.
@@ -126,6 +154,7 @@ class FindRed(Behavior):
 
     def __init__(self, bbcon, sensobs, motors, flag, pri=3):
         super().__init__()
+
 
 class Arbitrator:
 
