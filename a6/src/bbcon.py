@@ -65,8 +65,8 @@ class Sensobs:
 
 class Motob:
 
-    def __init__(self):
-        self.motors = []
+    def __init__(self, motors):
+        self.motors = motors
         self.value = []
 
     def update(self):
@@ -78,15 +78,15 @@ class Motob:
 
 class Behavior:
 
-    def __init__(self, bbcon, sensobs, motors, flag, pri, degree):
+    def __init__(self, bbcon, sensobs, motors, flag, pri):
         self.bbcon = bbcon
         self.sensobs = sensobs
         self.motor_recommendations = motors
         self.active_flag = flag
         self.halt_request = []  # ??
         self.priority = pri
-        self.match_degree = degree
-        self.weight = degree * pri
+        self.match_degree = 0
+        self.weight = self.match_degree * pri
 
     def consider_deactivation(self):
         if self.active_flag:
@@ -104,6 +104,28 @@ class Behavior:
     def sense_and_act(self):
         pass
 
+
+class WhiteFloor(Behavior):
+    """Roboten skal holde seg innenfor de svarte strekene.
+    Denne oppførelen har pri = 1"""
+
+    def __init__(self, bbcon, sensobs, motors, flag, pri=1):
+        super().__init__()
+
+
+class Avoid(Behavior):
+    """Roboten skal unngå hindringer.
+    Denne oppførselen har pri = 2"""
+
+    def __init__(self, bbcon, sensobs, motors, flag, pri=2):
+        super().__init__()
+
+class FindRed(Behavior):
+    """Roboten skal finne de røde tingene vi har plassert ut.
+    Denne har pri = 3"""
+
+    def __init__(self, bbcon, sensobs, motors, flag, pri=3):
+        super().__init__()
 
 class Arbitrator:
 
