@@ -3,6 +3,9 @@ BBCON. yoyoyoyo
 Mikkel sier: Har jeg fått det til nå?
 Giske: jeg klarte det!
 """
+import random
+import time
+
 import motors
 
 
@@ -42,14 +45,15 @@ class BBCON:
         for behav in self.behaviors:
             behav.update()
 
+        motor_rec, halt = self.arbitrator.choose_action()
+
         for motor in self.motobs:
-            motor.update()
+            motor.update(motor_rec)
 
-    '''def choose_action(self):
-        """choose a winning be-havior and return that
-        behavior’s motor recommendations and halt request flag"""
+        time.sleep(0.5)  # Får en pause sånn at motorene får kjørt litt før neste handling.
 
-        return self.arbitrator.choose_action() '''
+        for sensob in self.sensobs:
+            sensob.reset()
 
 
 class Sensobs:
@@ -66,6 +70,9 @@ class Sensobs:
     def get_value(self):
         return self.value
 
+    def reset(self):
+        self.value = []
+
 
 class Motob:
 
@@ -73,12 +80,13 @@ class Motob:
         self.motors = motors
         self.value = []
 
-    def update(self):
-        self.motor[0].set_value(self.value[0])
-        self.motor[1].set_value(self.value[1])
+    def update(self, value):
+        self.set_value(value)
+        self.operationalize(self.value)
 
-    def operationalize(self):
-        pass
+    def operationalize(self, value):
+        self.motor[0].set_value(value[0])
+        self.motor[1].set_value(value[1])
 
     def set_value(self, value):
         self.value = value
@@ -91,7 +99,7 @@ class Behavior:
         self.sensobs = sensobs
         self.motor_recommendations = []
         self.active_flag = False
-        self.halt_request = []  # ??
+        self.halt_request = None  # ??
         self.priority = pri
         self.match_degree = 0  # Regnes ut i fra
         self.weight = 0  # self.match_degree * pri
@@ -117,9 +125,12 @@ class Behavior:
     def sense_and_act(self):
         match_deg = 9
         return match_deg
-    
+
     def update_weight(self):
-        self.weight = self.match_degree *self.priority
+        self.weight = self.match_degree * self.priority
+
+    def get_motor_rec(self):
+        return self.motor_recommendations
 
 
 class WhiteFloor(Behavior):
@@ -133,7 +144,7 @@ class WhiteFloor(Behavior):
         super().__init__()
 
     def sense_and_act(self):
-        #Value er en array
+        # Value er en array
         value = self.sensobs.value
         maks = 300
         index = -1
@@ -141,7 +152,7 @@ class WhiteFloor(Behavior):
             if number > maks:
                 maks = number
                 index = value[number]
-        degree = maks/2000  # 2000 skal den få veldig høy degree
+        degree = maks / 2000  # 2000 skal den få veldig høy degree
         # Da vil vi at roboten skal rygge
         if index == 0:
             self.motor_recommendations = motors.right()
@@ -166,7 +177,7 @@ class Avoid(Behavior):
 
     def sense_and_act(self):
         value = self.sensobs.value
-        degree = value/600  # Hvis vi antar 600 er veldig nært
+        degree = value / 600  # Hvis vi antar 600 er veldig nært
         # Da vil vi at roboten skal rygge
         self.motor_recommendations = motors.backward()
         # Evt halt-req
@@ -184,17 +195,31 @@ class FindRed(Behavior):
         # Antar vi får inn en RGB = (R, G, B)
         value = self.sensobs.value
         red = value[0] - value[1] - value[2]
-        degree = value/255  # 255 er veeeldig rød
+        degree = value / 255  # 255 er veeeldig rød
         # Da vil vi at roboten skal rygge
-        self.motor_recommendations = motors.forward() # Kan feks sette farten til maks sånn at vi kjører den røde gjenstanden ned
+        self.motor_recommendations = motors.forward()  # Kan feks sette farten til maks sånn at vi kjører den røde gjenstanden ned
         # Evt halt-req
         return degree
 
+
 class Arbitrator:
 
-    def __init__(self):
-        self.actions = []
-        self.active
+    def __init__(self, behavior):
+        self.behaviors = behavior
+        self.halt = False
+        self.motor_rec = [0, 0]
 
-    def choose_action(self):
-        return self.actions, self.active
+    def choose_action(self, weights):
+        tot = 0
+        for weight in weights:
+            tot += weight
+        choose = random.uniform(0, tot)
+        choose_list = [weights[1],weights[1]+weights[2],weights[1]+weights[2]+weights[3]]
+        if choose <= choose_list[0]:
+            self.motor_rec = self.behaviors[0].get_motor_rec()
+        elif choose <= choose_list[1]:
+            self.motor_rec = self.behaviors[1].get_motor_rec()
+        else:
+            self.motor_rec =  self.behaviors[2].get_motor_rec()
+            self.halt = True
+        return self.motor_rec, self.halt
