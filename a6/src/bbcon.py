@@ -17,6 +17,7 @@ class BBCON:
         self.sensobs = []
         self.motobs = []
         self.arbitrator = None
+        self.halt = False
 
     def add_behavior(self, behavior):
         """append a newly-created behavior onto the behaviors list"""
@@ -46,6 +47,7 @@ class BBCON:
             behav.update()
 
         motor_rec, halt = self.arbitrator.choose_action()
+        self.halt = halt
 
         for motor in self.motobs:
             motor.update(motor_rec)
@@ -204,8 +206,8 @@ class FindRed(Behavior):
 
 class Arbitrator:
 
-    def __init__(self, behavior):
-        self.behaviors = behavior
+    def __init__(self, behaviors):
+        self.behaviors = behaviors
         self.halt = False
         self.motor_rec = [0, 0]
 
@@ -220,6 +222,20 @@ class Arbitrator:
         elif choose <= choose_list[1]:
             self.motor_rec = self.behaviors[1].get_motor_rec()
         else:
-            self.motor_rec =  self.behaviors[2].get_motor_rec()
+            self.motor_rec = self.behaviors[2].get_motor_rec()
             self.halt = True
         return self.motor_rec, self.halt
+
+
+def main():
+    bbcon = BBCON()
+    white = WhiteFloor()
+    avoid = Avoid()
+    red = FindRed()
+    bbcon.add_behavior(white)
+    bbcon.add_behavior(avoid)
+    bbcon.add_behavior(red)
+    while bbcon.halt is False:
+        bbcon.run_one_timestep()
+
+main()
