@@ -72,3 +72,7 @@ def shoot_panorama(camera,motors,shots=5):
         im = im.concat_horiz(IMR.Imager(image=camera.update()))
     return im
 
+
+
+if __name__ == "__main__":
+    explorer()

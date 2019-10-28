@@ -56,6 +56,7 @@ class BBCON:
 
             motor_rec, halt, behavior = self.arbitrator.choose_action()
             self.halt = halt
+            print("Zumoen har blitt haltet")
 
             for motor in self.motobs:
                 motor.update(motor_rec)
