@@ -12,6 +12,7 @@ from imager2 import Imager
 from zumo_button import ZumoButton
 import numpy as np
 import wiringpi as wp
+import reflectance_sensors as rs
 
 
 class BBCON:
@@ -48,23 +49,24 @@ class BBCON:
             self.active_behaviors.remove(behavior)
 
     def run_one_timestep(self):
-        for sensob in self.sensobs:
-            sensob.update()
 
-        for behav in self.behaviors:
-            behav.update()
+        while not self.halt:
+            for sensob in self.sensobs:
+                sensob.update()
 
-        motor_rec, halt = self.arbitrator.choose_action()
-        self.halt = halt
+            for behav in self.behaviors:
+                behav.update()
 
-        for motor in self.motobs:
-            motor.update(motor_rec)
+            motor_rec, halt, behavior = self.arbitrator.choose_action()
+            self.halt = halt
 
-        # Får en pause sånn at motorene får kjørt litt før neste handling.
-        time.sleep(0.5)
+            for motor in self.motobs:
+                motor.update(motor_rec)
 
-        for sensob in self.sensobs:
-            sensob.reset()
+            time.sleep(0.5)  # Får en pause sånn at motorene får kjørt litt før neste handling.
+
+            for sensob in self.sensobs:
+                sensob.reset()
 
 
 class Sensobs:
@@ -105,6 +107,8 @@ class Motob:
             self.motors.left(dur=1)
         elif value == 4:
             self.motors.backward(dur=1)
+        elif value == 5:
+            self.motors.forward(dur=4)
         else:
             self.motors.forward(dur=1)
         # self.motors.set_left_dir(value[0])
@@ -175,25 +179,32 @@ class WhiteFloor(Behavior):
     def sense_and_act(self):
         # Value er en array
         value = self.sensobs.value
-        maks = 300
+        maks = 350
         index = -1
         for number in value:
             if number > maks:
                 maks = number
                 index = value[number]
-        degree = maks / 2000  # 2000 skal den få veldig høy degree
+        degree = self.calc_match(value, maks)
         # Da vil vi at roboten skal rygge
         print("MOTORS ER ", motors)
-        if index == 0:
-            self.motor_recommendations = 1  # [1, 0]#motors.right(0.25, 5)
-        elif index == 5:
-            self.motor_recommendations = 2  # [0, 1]#motors.left(0.25, 5)
+
+        if index == 0 or index == 1:
+            self.motor_recommendations = 1 #[1, 0]#motors.right(0.25, 5)
+        elif index == 5 or index == 4:
+            self.motor_recommendations = 2 #[0, 1]#motors.left(0.25, 5)
         elif index == -1:
             self.motor_recommendations = 3  # [1, 1]#motors.forward(0.25, 5)
         else:
             self.motor_recommendations = 4  # [-1, -1]#motors.backward(0.25, 5)
         # Evt halt-req
+        return degree, self.motor_recommendations
+
+    def calc_match(self, value, maks):
+        diff = maks - 350
+        degree = diff / 650  # 2000 skal den få veldig høy degree
         return degree
+
 
 
 class Avoid(Behavior):
@@ -204,16 +215,20 @@ class Avoid(Behavior):
 
     def __init__(self, bbcon, sensobs):
         super().__init__(bbcon, sensobs)
-        self.priority = 2
+        self.priority = 1
 
     def sense_and_act(self):
         value = self.sensobs.value[0]
         print("Value is ", value)
-        degree = 1 - (value / 100)
+        degree = self.calc_mach()
         # Da vil vi at roboten skal rygge
         self.motor_recommendations = 4  # self.motors.backward()
         # Evt halt-req
         return degree, self.motor_recommendations
+
+    def calc_mach(self, value):
+        degree = 1/value
+        return degree
 
 
 class FindRed(Behavior):
@@ -254,6 +269,9 @@ class FindRed(Behavior):
 
         return (0.8 if ratio > 0.05 else 0, 5)
 
+    def calc_match(self, value):
+        return value
+
 
 class Arbitrator:
 
@@ -275,27 +293,34 @@ class Arbitrator:
         to = weights[0]+weights[1]
         tre = weights[0]+weights[1]+weights[2]
         choose_list = [en, to, tre]
+        behavior = None
         if choose <= choose_list[0]:
             self.motor_rec = self.behaviors[0].get_motor_rec()
+            behavior = self.behaviors[0]
         elif choose <= choose_list[1]:
             self.motor_rec = self.behaviors[1].get_motor_rec()
+            behavior = self.behaviors[1]
         else:
             self.motor_rec = self.behaviors[2].get_motor_rec()
             self.halt = True
-        return self.motor_rec, self.halt
+            behavior = self.behaviors[2]
+        return self.motor_rec, self.halt, behavior
 
 
 def main():
     motor = motors.Motors()
     #motor.forward(0.5, 2.0)
     motobs = Motob(motor)
-    sensor = us.Ultrasonic()
-    bbcon = BBCON()
-    sensorer = [sensor]
+    sensor = rs.ReflectanceSensors()
+    sensor.calibrate()
+    print("Sensorverdi ", sensor.get_value())
+    sensor2 = us.Ultrasonic()
+    #bbcon = BBCON()
+    sensorer = [sensor2]
     sensob = Sensobs(sensorer)
     sensob.update()
     print("Sensorverdi ", sensob.value)
-    bbcon.add_sensob(sensob)
+    '''bbcon.add_sensob(sensob)
     bbcon.add_motob(motobs)
     avoid = Avoid(bbcon, sensob)
     x, y = avoid.update()  # sense_and_act()
@@ -323,6 +348,8 @@ def main():
     # while bbcon.halt is False:
     #    bbcon.run_one_timestep()
     # print(sensob.value)
-wp.wiringPiSetupGpio()
+    #print(sensob.value)'''
+
+
 
 # main()
