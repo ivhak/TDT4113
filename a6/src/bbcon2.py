@@ -78,7 +78,6 @@ class Behavior:
             self.consider_activation()
         self.sense_and_act()
         self.update_weight()
-        return self.weight, self.halt_request
 
     def sense_and_act(self):
         pass
@@ -120,7 +119,6 @@ class WhiteFloor(Behavior):
         return "WhiteFloor"
 
     def sense_and_act(self):
-        # Value er en array
         value = self.bbcon.get_sensob_value(ReflectanceSensors)
         maks = 350
         index = -1
@@ -131,13 +129,13 @@ class WhiteFloor(Behavior):
         self.match_degree = self.calc_match(value, maks)
 
         if index == 0 or index == 1:
-            self.motor_recommendations = m.right  # [1, 0]#motors.right(0.25, 5)
+            self.motor_recommendations = m.right  #
         elif index == 5 or index == 4:
-            self.motor_recommendations = m.left  # [0, 1]#motors.left(0.25, 5)
+            self.motor_recommendations = m.left
         elif index == -1:
-            self.motor_recommendations = m.forward  # [1, 1]#motors.forward(0.25, 5)
+            self.motor_recommendations = m.forward
         else:
-            self.motor_recommendations = m.backward  # [-1, -1]#motors.backward(0.25, 5)
+            self.motor_recommendations = m.backward
 
     def calc_match(self, value, maks):
         diff = maks - 350
