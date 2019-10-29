@@ -7,7 +7,10 @@ import random
 import time
 import ultrasonic as us
 import motors
+from camera import Camera
+from imager2 import Imager
 from zumo_button import ZumoButton
+import numpy as np
 import wiringpi as wp
 import reflectance_sensors as rs
 
@@ -91,7 +94,7 @@ class Motob:
     def __init__(self, motors):
         self.motors = motors
         self.value = 0
-        #wp.wiringPiSetupGpio()
+        # wp.wiringPiSetupGpio()
 
     def update(self, value):
         self.set_value(value)
@@ -109,7 +112,11 @@ class Motob:
             self.motors.forward(dur=4)
         else:
             self.motors.forward(dur=1)
+        # self.motors.set_left_dir(value[0])
+        # self.motors.set_right_dir(value[1])
 
+        # self.motors[0].set_value(value[0])
+        # self.motors[1].set_value(value[1])
 
     def set_value(self, value):
         self.value = value
@@ -182,14 +189,15 @@ class WhiteFloor(Behavior):
         degree = self.calc_match(value, maks)
         # Da vil vi at roboten skal rygge
         print("MOTORS ER ", motors)
+
         if index == 0 or index == 1:
             self.motor_recommendations = 1 #[1, 0]#motors.right(0.25, 5)
         elif index == 5 or index == 4:
             self.motor_recommendations = 2 #[0, 1]#motors.left(0.25, 5)
         elif index == -1:
-            self.motor_recommendations = 3 #[1, 1]#motors.forward(0.25, 5)
+            self.motor_recommendations = 3  # [1, 1]#motors.forward(0.25, 5)
         else:
-            self.motor_recommendations = 4 #[-1, -1]#motors.backward(0.25, 5)
+            self.motor_recommendations = 4  # [-1, -1]#motors.backward(0.25, 5)
         # Evt halt-req
         return degree, self.motor_recommendations
 
@@ -215,7 +223,7 @@ class Avoid(Behavior):
         print("Value is ", value)
         degree = self.calc_mach()
         # Da vil vi at roboten skal rygge
-        self.motor_recommendations = 4 #self.motors.backward()
+        self.motor_recommendations = 4  # self.motors.backward()
         # Evt halt-req
         return degree, self.motor_recommendations
 
@@ -228,19 +236,39 @@ class FindRed(Behavior):
     """Roboten skal finne de røde tingene vi har plassert ut.
     Denne har pri = 3"""
 
-    def __init__(self, bbcon, sensob):
+    def __init__(self, bbcon=None, sensob=None):
+
+        self.camera = Camera(img_width=40, img_height=96)
+        self.imager = Imager(width=40, height=96)
+        self.priority = 1
         super().__init__(bbcon, sensob)
-        self.priority = 2
 
     def sense_and_act(self):
-        # Antar vi får inn en RGB = (R, G, B)
-        value = self.sensobs.value
-        red = value[0] - value[1] - value[2]
-        degree = self.calc_match()
-        # Da vil vi at roboten skal rygge
-        self.motor_recommendations = 5  # Kan feks sette farten til maks sånn at vi kjører den røde gjenstanden ned
-        # Evt halt-req
-        return degree, self.motor_recommendations
+        """
+        Take a picture, find the percentage of red pixels
+        """
+
+        def red_only(p):
+            lower = (155, 25, 0)
+            upper = (255, 100, 100)
+            r, g, b = p
+            if (lower[0] <= r <= upper[0] and
+                lower[1] <= g <= upper[1] and
+                    lower[2] <= b <= upper[2]):
+                return (255, 255, 255)
+            return (0, 0, 0)
+
+        self.camera.update()
+        image = self.camera.value
+        mapped = self.imager.map_image2(red_only, image=image)
+        mapped.dump_image(fid='image_mapped', type='png')
+
+        im_arr = np.array(mapped.image)
+        mask = im_arr == [255, 255, 255]
+        white_pixels = np.sum(mask)
+        ratio = white_pixels/(len(im_arr[0])*len(im_arr))
+
+        return (0.8 if ratio > 0.05 else 0, 5)
 
     def calc_match(self, value):
         return value
@@ -256,7 +284,7 @@ class Arbitrator:
     def choose_action(self):
         tot = 0
         weights = []
-        for i in range(0,3):
+        for i in range(0, 3):
             weights.append(self.behaviors[i].get_w())
         for weight in weights:
             tot += weight
@@ -296,7 +324,7 @@ def main():
     '''bbcon.add_sensob(sensob)
     bbcon.add_motob(motobs)
     avoid = Avoid(bbcon, sensob)
-    x, y= avoid.update() #sense_and_act()
+    x, y = avoid.update()  # sense_and_act()
     print("Vil velge ", y)
     print("Degree ", x)
     print("TEST ", avoid.match_degree)
@@ -311,18 +339,18 @@ def main():
     print("Choose ", choose, " halt ", halt)
     motobs.update(choose)
 
-    #arbi =
+    # arbi =
     #white = WhiteFloor(bbcon, sensob)
     #avoid = Avoid()
     #red = FindRed()
-    #bbcon.add_behavior(white)
-    #bbcon.add_behavior(avoid)
-    #bbcon.add_behavior(red)
-    #while bbcon.halt is False:
+    # bbcon.add_behavior(white)
+    # bbcon.add_behavior(avoid)
+    # bbcon.add_behavior(red)
+    # while bbcon.halt is False:
     #    bbcon.run_one_timestep()
+    # print(sensob.value)
     #print(sensob.value)'''
 
 
-wp.wiringPiSetupGpio()
 
-main()
+# main()
