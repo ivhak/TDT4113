@@ -4,7 +4,7 @@ BBCON
 from reflectance_sensors import ReflectanceSensors
 from ultrasonic import Ultrasonic
 from camera import Camera
-from motors import Motors
+import motors as m
 from imager2 import Imager
 import numpy as np
 from RPi import GPIO
@@ -15,7 +15,7 @@ IMG_HEIGHT = 96
 
 class BBCON:
     def __init__(self):
-        self.motor = Motors()
+        self.motor = m.Motors()
         self.behaviors = []
         self.sensobs = {
             Camera(img_width=IMG_WIDTH, img_height=IMG_HEIGHT): None,
@@ -48,10 +48,13 @@ class BBCON:
         for behavior in self.behaviors:
             behavior.update()
 
+        chosen_behavior = self.arbitrator.choose_behavior()
+        chosen_behavior.motor_recommendations(self.motor)
+
 
 class Behavior:
     def __init__(self):
-        self.motor_recommendations = []
+        self.motor_recommendations = None
         self.active_flag = False
         self.halt_request = None  # ??
         self.priority = 0
@@ -103,7 +106,7 @@ class Avoid(Behavior):
         print("Value is ", value)
         degree = self.calc_match(value)
         # Da vil vi at roboten skal rygge
-        self.motor_recommendations = 4  # self.motors.backward()
+        self.motor_recommendations = m.backward  # self.motors.backward()
         # Evt halt-req
         return degree, self.motor_recommendations
 
@@ -131,13 +134,13 @@ class WhiteFloor(Behavior):
         degree = self.calc_match(value, maks)
 
         if index == 0 or index == 1:
-            self.motor_recommendations = 1  # [1, 0]#motors.right(0.25, 5)
+            self.motor_recommendations = m.right  # [1, 0]#motors.right(0.25, 5)
         elif index == 5 or index == 4:
-            self.motor_recommendations = 2  # [0, 1]#motors.left(0.25, 5)
+            self.motor_recommendations = m.left  # [0, 1]#motors.left(0.25, 5)
         elif index == -1:
-            self.motor_recommendations = 3  # [1, 1]#motors.forward(0.25, 5)
+            self.motor_recommendations = m.forward  # [1, 1]#motors.forward(0.25, 5)
         else:
-            self.motor_recommendations = 4  # [-1, -1]#motors.backward(0.25, 5)
+            self.motor_recommendations = m.backward  # [-1, -1]#motors.backward(0.25, 5)
         return degree, self.motor_recommendations
 
     def calc_match(self, value, maks):
@@ -197,13 +200,16 @@ class Arbitrator:
 
     def __init__(self):
         self.bbcon = None
-        self.motor_recommendation = [1, 1]
+        self.motor_recommendation = m.forward
 
-    def choose_action(self):
-        behaviors = self.bbcon.behaviors
-        weights = []
-        for behavior in behaviors:
-            weights.append(behavior.weight)
+    def choose_behavior(self):
+        chosen_behavior = None
+        maks = 0
+        for behavior in self.bbcon.behaviors:
+            if behavior.weight >= maks:
+                chosen_behavior = behavior
+        return chosen_behavior
+
 
 
 
