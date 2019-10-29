@@ -285,7 +285,6 @@ class FindRed(Behavior):
 
         return 0.8 if ratio > 0.05 else 0, 5
 
-
 class Arbitrator:
 
     def __init__(self, behaviors):
@@ -340,6 +339,23 @@ def main():
     # print("Sensorverdi ", sensob.value)
     '''
     bbcon.add_sensob(sensob)
+    '''print("Hei")
+    motor = motors.Motors()
+    #motor.forward(0.5, 2.0)
+    motobs = Motob(motor)
+    sensor = rs.ReflectanceSensors()
+    sensor.calibrate()
+    print("Sensorverdi ", sensor.get_value())'''
+    print("HEIIIIII")
+    sensor2 = us.Ultrasonic()
+    sensor2.update()
+    print("Sens ", sensor2.get_value())
+    #bbcon = BBCON()
+    '''sensorer = [sensor2]
+    sensob = Sensobs(sensorer)
+    sensob.update()
+    print("Sensorverdi ", sensob.value)'''
+    '''bbcon.add_sensob(sensob)
     bbcon.add_motob(motobs)
     avoid = Avoid(bbcon, sensob)
     x, y = avoid.update()  # sense_and_act()
@@ -369,5 +385,18 @@ def main():
     print(sensob.value)
     '''
 
+    
+    #white = WhiteFloor(bbcon, sensob)
+    #avoid = Avoid()
+    #red = FindRed()
+    # bbcon.add_behavior(white)
+    # bbcon.add_behavior(avoid)
+    # bbcon.add_behavior(red)
+    # while bbcon.halt is False:
+    #    bbcon.run_one_timestep()
+    # print(sensob.value)
+    #print(sensob.value)'''
 
-# main()
+
+
+main()
