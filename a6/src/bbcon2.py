@@ -4,9 +4,11 @@ BBCON
 from reflectance_sensors import ReflectanceSensors
 from ultrasonic import Ultrasonic
 from camera import Camera
-import motors as m
+from motors import Motors
 from imager2 import Imager
 from RPi import GPIO
+from zumo_button import ZumoButton
+import wiringpi as wp
 import numpy as np
 
 IMG_WIDTH = 40
@@ -15,7 +17,7 @@ IMG_HEIGHT = 96
 
 class BBCON:
     def __init__(self):
-        self.motor = m.Motors()
+        self.motor = Motors()
         self.behaviors = []
         self.sensobs = {
             Camera(img_width=IMG_WIDTH, img_height=IMG_HEIGHT): None,
@@ -31,8 +33,7 @@ class BBCON:
 
     def update_sensobs(self):
         for sensob in self.sensobs.keys():
-            sensob.update()
-            self.sensobs[sensob] = sensob.value
+            self.sensobs[sensob] = sensob.update()
 
     def get_sensob_value(self, sensob):
         for key, value in self.sensobs.items():
@@ -49,7 +50,12 @@ class BBCON:
             behavior.update()
 
         chosen_behavior = self.arbitrator.choose_behavior()
-        chosen_behavior.motor_recommendations(self.motor)
+        if chosen_behavior.motor_settings:
+            chosen_behavior.motor_recommendations(
+                self.motor, *chosen_behavior.motor_settings)
+        else:
+            chosen_behavior.motor_recommendations(self.motor)
+        print("Chose behavior: {}".format(chosen_behavior))
 
 
 class Behavior:
@@ -104,10 +110,10 @@ class Avoid(Behavior):
         value = self.bbcon.get_sensob_value(Ultrasonic)
         print("Value is ", value)
         self.match_degree = self.calc_match(value)
-        self.motor_recommendations = m.backward
+        self.motor_recommendations = Motors.backward
 
     def calc_match(self, value):
-        return 1/value if value else 0
+        return 1/value if value else 1
 
 
 class WhiteFloor(Behavior):
@@ -129,13 +135,13 @@ class WhiteFloor(Behavior):
         self.match_degree = self.calc_match(value, maks)
 
         if index == 0 or index == 1:
-            self.motor_recommendations = m.right  #
+            self.motor_recommendations = Motors.right  #
         elif index == 5 or index == 4:
-            self.motor_recommendations = m.left
+            self.motor_recommendations = Motors.left
         elif index == -1:
-            self.motor_recommendations = m.forward
+            self.motor_recommendations = Motors.forward
         else:
-            self.motor_recommendations = m.backward
+            self.motor_recommendations = Motors.backward
 
     def calc_match(self, value, maks):
         diff = maks - 350
@@ -152,7 +158,7 @@ class FindRed(Behavior):
     def __init__(self, sensob=None, debug=False):
         self.priority = 1
         self.debug = debug
-        self.motor_recommendations = m.forward()
+        self.motor_recommendations = Motors.forward
         self.motor_settings = (0.5, 4)
         self.imager = Imager(width=IMG_WIDTH, height=IMG_HEIGHT)
         super().__init__()
@@ -189,8 +195,13 @@ class FindRed(Behavior):
 
         ratio = white_pixels/(len(im_arr[0])*len(im_arr))
 
-        self.match_degree = 0.8 if ratio > 0.5 else 0
-        self.motor_recommendations = m.forward
+        self.match_degree = 0.8
+        if ratio > 0.5:
+            self.motor_recommendations = Motors.forward
+            self.motor_settings = (0.5, 5)
+        else:
+            self.motor_recommendations = Motors.forward
+            self.motor_settings = (0.1, 5)
 
 
 
@@ -198,9 +209,9 @@ class Arbitrator:
 
     def __init__(self):
         self.bbcon = None
-        self.motor_recommendation = m.forward
 
     def choose_behavior(self):
+        return self.bbcon.behaviors[0]
         chosen_behavior = None
         maks = 0
         for behavior in self.bbcon.behaviors:
@@ -209,15 +220,19 @@ class Arbitrator:
         return chosen_behavior
 
 
-
-
 def main():
     GPIO.setwarnings(False)
+    wp.wiringPiSetupGpio()
     bbcon = BBCON()
-    bbcon.add_behavior(FindRed(debug=True))
-    bbcon.add_behavior(Avoid())
-    bbcon.add_behavior(WhiteFloor())
-    bbcon.run_one_timestep()
+    bbcon.add_behavior(FindRed())
+    # bbcon.add_behavior(Avoid())
+    # bbcon.add_behavior(WhiteFloor())
+    bbcon.add_arbitrator(Arbitrator())
+
+    ZumoButton().wait_for_press()
+
+    while True:
+        bbcon.run_one_timestep()
 
 
 if __name__ == '__main__':
