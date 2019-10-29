@@ -179,7 +179,11 @@ class WhiteFloor(Behavior):
 
     def sense_and_act(self):
         # Value er en array
-        value = self.sensobs.value
+
+        original_value = self.sensobs.value
+        value = original_value[0:4]
+
+
         maks = 350
         index = -1
         for number in value:
@@ -192,7 +196,7 @@ class WhiteFloor(Behavior):
 
         if index == 0 or index == 1:
             self.motor_recommendations = 1 #[1, 0]#motors.right(0.25, 5)
-        elif index == 5 or index == 4:
+        elif index == 4:
             self.motor_recommendations = 2 #[0, 1]#motors.left(0.25, 5)
         elif index == -1:
             self.motor_recommendations = 3  # [1, 1]#motors.forward(0.25, 5)
