@@ -76,7 +76,7 @@ class Behavior:
             self.consider_deactivation()
         else:
             self.consider_activation()
-        self.match_degree, self.motor_recommendations = self.sense_and_act()
+        self.sense_and_act()
         self.update_weight()
         return self.weight, self.halt_request
 
@@ -104,11 +104,8 @@ class Avoid(Behavior):
     def sense_and_act(self):
         value = self.bbcon.get_sensob_value(Ultrasonic)
         print("Value is ", value)
-        degree = self.calc_match(value)
-        # Da vil vi at roboten skal rygge
-        self.motor_recommendations = m.backward  # self.motors.backward()
-        # Evt halt-req
-        return degree, self.motor_recommendations
+        self.match_degree = self.calc_match(value)
+        self.motor_recommendations = m.backward
 
     def calc_match(self, value):
         return 1/value if value else 0
@@ -131,7 +128,7 @@ class WhiteFloor(Behavior):
             if number > maks:
                 maks = number
                 index = value[number]
-        degree = self.calc_match(value, maks)
+        self.match_degree = self.calc_match(value, maks)
 
         if index == 0 or index == 1:
             self.motor_recommendations = m.right  # [1, 0]#motors.right(0.25, 5)
@@ -141,7 +138,6 @@ class WhiteFloor(Behavior):
             self.motor_recommendations = m.forward  # [1, 1]#motors.forward(0.25, 5)
         else:
             self.motor_recommendations = m.backward  # [-1, -1]#motors.backward(0.25, 5)
-        return degree, self.motor_recommendations
 
     def calc_match(self, value, maks):
         diff = maks - 350
@@ -193,7 +189,8 @@ class FindRed(Behavior):
 
         ratio = white_pixels/(len(im_arr[0])*len(im_arr))
 
-        return 0.8 if ratio > 0.05 else 0, 5
+        self.match_degree = 0.8 if ratio > 0.5 else 0
+        self.motor_recommendations = m.forward
 
 
 class Arbitrator:
