@@ -22,6 +22,7 @@ class BBCON:
             Ultrasonic(): None,
             ReflectanceSensors(): None
         }
+        self.arbitrator = None
 
     def add_behavior(self, behavior):
         if behavior not in self.behaviors:
@@ -37,6 +38,10 @@ class BBCON:
         for key, value in self.sensobs.items():
             if isinstance(key, sensob):
                 return value
+
+    def add_arbitrator(self, arbitrator):
+        self.arbitrator = arbitrator
+        arbitrator.bbcon = self
 
     def run_one_timestep(self):
         self.update_sensobs()
@@ -68,9 +73,9 @@ class Behavior:
             self.consider_deactivation()
         else:
             self.consider_activation()
-        self.match_degree, self.halt_request = self.sense_and_act()
+        self.match_degree, self.motor_recommendations = self.sense_and_act()
         self.update_weight()
-        return self.match_degree, self.halt_request
+        return self.weight, self.halt_request
 
     def sense_and_act(self):
         pass
@@ -186,6 +191,20 @@ class FindRed(Behavior):
         ratio = white_pixels/(len(im_arr[0])*len(im_arr))
 
         return 0.8 if ratio > 0.05 else 0, 5
+
+
+class Arbitrator:
+
+    def __init__(self):
+        self.bbcon = None
+        self.motor_recommendation = [1, 1]
+
+    def choose_action(self):
+        behaviors = self.bbcon.behaviors
+        weights = []
+        for behavior in behaviors:
+            weights.append(behavior.weight)
+
 
 
 def main():

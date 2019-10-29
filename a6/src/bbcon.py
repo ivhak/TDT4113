@@ -274,9 +274,6 @@ class FindRed(Behavior):
 
         return (0.8 if ratio > 0.05 else 0, 5)
 
-    def calc_match(self, value):
-        return value
-
 
 class Arbitrator:
 
@@ -313,18 +310,22 @@ class Arbitrator:
 
 
 def main():
+    '''print("Hei")
     motor = motors.Motors()
     #motor.forward(0.5, 2.0)
     motobs = Motob(motor)
     sensor = rs.ReflectanceSensors()
     sensor.calibrate()
-    print("Sensorverdi ", sensor.get_value())
+    print("Sensorverdi ", sensor.get_value())'''
+    print("HEIIIIII")
     sensor2 = us.Ultrasonic()
+    sensor2.update()
+    print("Sens ", sensor2.get_value())
     #bbcon = BBCON()
-    sensorer = [sensor2]
+    '''sensorer = [sensor2]
     sensob = Sensobs(sensorer)
     sensob.update()
-    print("Sensorverdi ", sensob.value)
+    print("Sensorverdi ", sensob.value)'''
     '''bbcon.add_sensob(sensob)
     bbcon.add_motob(motobs)
     avoid = Avoid(bbcon, sensob)
@@ -343,7 +344,8 @@ def main():
     print("Choose ", choose, " halt ", halt)
     motobs.update(choose)
 
-    # arbi =
+
+    
     #white = WhiteFloor(bbcon, sensob)
     #avoid = Avoid()
     #red = FindRed()
@@ -357,4 +359,4 @@ def main():
 
 
 
-# main()
+main()
