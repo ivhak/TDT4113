@@ -7,6 +7,7 @@ from camera import Camera
 from motors import Motors
 from imager2 import Imager
 import numpy as np
+from RPi import GPIO
 
 IMG_WIDTH = 40
 IMG_HEIGHT = 96
@@ -84,6 +85,62 @@ class Behavior:
         return self.weight
 
 
+class Avoid(Behavior):
+    def __init__(self):
+        self.priority = 1
+        super().__init__()
+
+    def __name__(self):
+        return "Avoid"
+
+    def sense_and_act(self):
+        value = self.bbcon.get_sensob_value(Ultrasonic)
+        print("Value is ", value)
+        degree = self.calc_match(value)
+        # Da vil vi at roboten skal rygge
+        self.motor_recommendations = 4  # self.motors.backward()
+        # Evt halt-req
+        return degree, self.motor_recommendations
+
+    def calc_match(self, value):
+        return 1/value if value else 0
+
+
+class WhiteFloor(Behavior):
+    def __init__(self):
+        self.priority = 3
+        super().__init__()
+
+    def __name__(self):
+        return "WhiteFloor"
+
+    def sense_and_act(self):
+        # Value er en array
+        value = self.bbcon.get_sensob_value(ReflectanceSensors)
+        maks = 350
+        index = -1
+        for number in value:
+            if number > maks:
+                maks = number
+                index = value[number]
+        degree = self.calc_match(value, maks)
+
+        if index == 0 or index == 1:
+            self.motor_recommendations = 1  # [1, 0]#motors.right(0.25, 5)
+        elif index == 5 or index == 4:
+            self.motor_recommendations = 2  # [0, 1]#motors.left(0.25, 5)
+        elif index == -1:
+            self.motor_recommendations = 3  # [1, 1]#motors.forward(0.25, 5)
+        else:
+            self.motor_recommendations = 4  # [-1, -1]#motors.backward(0.25, 5)
+        return degree, self.motor_recommendations
+
+    def calc_match(self, value, maks):
+        diff = maks - 350
+        degree = diff / 650  # 2000 skal den få veldig høy degree
+        return degree
+
+
 class FindRed(Behavior):
     """
     This behavior advices the robot to accelerate whenever the camera spots
@@ -95,6 +152,9 @@ class FindRed(Behavior):
         self.debug = debug
         self.imager = Imager(width=IMG_WIDTH, height=IMG_HEIGHT)
         super().__init__()
+
+    def __name__(self):
+        return "FindRed"
 
     def sense_and_act(self):
         """
@@ -129,8 +189,11 @@ class FindRed(Behavior):
 
 
 def main():
+    GPIO.setwarnings(False)
     bbcon = BBCON()
     bbcon.add_behavior(FindRed(debug=True))
+    bbcon.add_behavior(Avoid())
+    bbcon.add_behavior(WhiteFloor())
     bbcon.run_one_timestep()
 
 
