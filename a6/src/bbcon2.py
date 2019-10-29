@@ -6,8 +6,8 @@ from ultrasonic import Ultrasonic
 from camera import Camera
 import motors as m
 from imager2 import Imager
-import numpy as np
 from RPi import GPIO
+import numpy as np
 
 IMG_WIDTH = 40
 IMG_HEIGHT = 96
@@ -152,6 +152,8 @@ class FindRed(Behavior):
     def __init__(self, sensob=None, debug=False):
         self.priority = 1
         self.debug = debug
+        self.motor_recommendations = m.forward()
+        self.motor_settings = (0.5, 4)
         self.imager = Imager(width=IMG_WIDTH, height=IMG_HEIGHT)
         super().__init__()
 
@@ -189,6 +191,7 @@ class FindRed(Behavior):
 
         self.match_degree = 0.8 if ratio > 0.5 else 0
         self.motor_recommendations = m.forward
+
 
 
 class Arbitrator:
