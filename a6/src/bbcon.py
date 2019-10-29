@@ -1,18 +1,20 @@
 """
-BBCON. yoyoyoyo
-Mikkel sier: Har jeg fått det til nå?
-Giske: jeg klarte det!
+BBCON
 """
+
 import random
 import time
-import ultrasonic as us
+from ultrasonic import Ultrasonic
 import motors
 from camera import Camera
 from imager2 import Imager
 from zumo_button import ZumoButton
 import numpy as np
 import wiringpi as wp
-import reflectance_sensors as rs
+from reflectance_sensors import ReflectanceSensors
+
+IMG_WIDTH = 40
+IMG_HEIGHT = 96
 
 
 class BBCON:
@@ -20,7 +22,7 @@ class BBCON:
     def __init__(self):
         self.behaviors = []
         self.active_behaviors = []
-        self.sensobs = []
+        self.sensobs = Sensobs()
         self.motobs = []
         self.arbitrator = None
         self.halt = False
@@ -29,6 +31,7 @@ class BBCON:
         """append a newly-created behavior onto the behaviors list"""
         if behavior not in self.behaviors:
             self.behaviors.append(behavior)
+            behavior.bbcon = self
 
     def add_sensob(self, sensob):
         """append a newly-created sensob onto the sensobs list"""
@@ -51,9 +54,6 @@ class BBCON:
     def run_one_timestep(self):
 
         while not self.halt:
-            for sensob in self.sensobs:
-                sensob.update()
-
             for behav in self.behaviors:
                 behav.update()
 
@@ -63,7 +63,8 @@ class BBCON:
             for motor in self.motobs:
                 motor.update(motor_rec)
 
-            time.sleep(0.5)  # Får en pause sånn at motorene får kjørt litt før neste handling.
+            # Får en pause sånn at motorene får kjørt litt før neste handling.
+            time.sleep(0.5)
 
             for sensob in self.sensobs:
                 sensob.reset()
@@ -71,21 +72,30 @@ class BBCON:
 
 class Sensobs:
 
-    def __init__(self, sensors):
-        self.sensors = sensors
-        self.value = []
+    def __init__(self):
+        self.sensors = {
+            'camera': Camera(img_width=IMG_WIDTH, img_height=IMG_HEIGHT),
+            'ultrasonic': Ultrasonic(),
+            'reflectance': ReflectanceSensors()
+        }
+        self.values = {
+            'camera': None,
+            'ultrasonic': None,
+            'reflectance': None,
+        }
 
     def update(self):
-        for sensor in self.sensors:
+        for name, sensor in self.sensors.items():
             sensor.update()
-            newValue = sensor.get_value()
-            self.value.append(newValue)
+            new_value = sensor.get_value()
+            self.values[name] = new_value
 
-    def get_value(self):
-        return self.value
+    def get_value(self, sensor):
+        return self.values[sensor]
 
     def reset(self):
-        self.value = []
+        for key in self.values.keys():
+            self.values[key] = None
 
 
 class Motob:
@@ -93,7 +103,7 @@ class Motob:
     def __init__(self, motors):
         self.motors = motors
         self.value = 0
-        # wp.wiringPiSetupGpio()
+        wp.wiringPiSetupGpio()
 
     def update(self, value):
         self.set_value(value)
@@ -123,9 +133,8 @@ class Motob:
 
 class Behavior:
 
-    def __init__(self, bbcon, sensobs):
-        self.bbcon = bbcon
-        self.sensobs = sensobs
+    def __init__(self):
+        self.sensobs = None
         self.motor_recommendations = []
         self.active_flag = False
         self.halt_request = None  # ??
@@ -169,12 +178,12 @@ class WhiteFloor(Behavior):
     """Roboten skal holde seg innenfor de svarte strekene.
     Denne oppførelen har pri = 1"""
 
-    """IR-sensor gir ut en array [0,..., 5], med verdier fra 0-2000. 
+    """IR-sensor gir ut en array [0,..., 5], med verdier fra 0-2000.
     0 er hvit, og 2000 er svart"""
 
-    def __init__(self, bbcon, sensob):
-        super().__init__(bbcon, sensob)
+    def __init__(self):
         self.priority = 3
+        self.sensobs = [ReflectanceSensors()]
 
     def sense_and_act(self):
         # Value er en array
@@ -190,9 +199,9 @@ class WhiteFloor(Behavior):
         print("MOTORS ER ", motors)
 
         if index == 0 or index == 1:
-            self.motor_recommendations = 1 #[1, 0]#motors.right(0.25, 5)
+            self.motor_recommendations = 1  # [1, 0]#motors.right(0.25, 5)
         elif index == 5 or index == 4:
-            self.motor_recommendations = 2 #[0, 1]#motors.left(0.25, 5)
+            self.motor_recommendations = 2  # [0, 1]#motors.left(0.25, 5)
         elif index == -1:
             self.motor_recommendations = 3  # [1, 1]#motors.forward(0.25, 5)
         else:
@@ -206,16 +215,15 @@ class WhiteFloor(Behavior):
         return degree
 
 
-
 class Avoid(Behavior):
     """Roboten skal unngå hindringer.
     Denne oppførselen har pri = 2"""
 
     """Antar at høy verdi(600) er nærme"""
 
-    def __init__(self, bbcon, sensobs):
-        super().__init__(bbcon, sensobs)
+    def __init__(self):
         self.priority = 1
+        self.sensobs = [Ultrasonic()]
 
     def sense_and_act(self):
         value = self.sensobs.value[0]
@@ -226,21 +234,23 @@ class Avoid(Behavior):
         # Evt halt-req
         return degree, self.motor_recommendations
 
-    def calc_mach(self, value):
+    def calc_macth(self, value):
         degree = 1/value
         return degree
 
 
+
 class FindRed(Behavior):
-    """Roboten skal finne de røde tingene vi har plassert ut.
-    Denne har pri = 3"""
+    """
+    This behaviour advices the robot to accelerate whenever the camera spots
+    something red.
+    """
 
-    def __init__(self, bbcon=None, sensob=None):
-
-        self.camera = Camera(img_width=40, img_height=96)
-        self.imager = Imager(width=40, height=96)
+    def __init__(self, sensob=None, debug=False):
         self.priority = 1
-        super().__init__(bbcon, sensob)
+        self.debug = debug
+        self.imager = Imager(width=IMG_WIDTH, height=IMG_HEIGHT)
+        super().__init__()
 
     def sense_and_act(self):
         """
@@ -248,29 +258,32 @@ class FindRed(Behavior):
         """
 
         def red_only(p):
+            """
+            Maps red pixels to white, everything else to black
+            """
             lower = (155, 25, 0)
             upper = (255, 100, 100)
-            r, g, b = p
-            if (lower[0] <= r <= upper[0] and
-                lower[1] <= g <= upper[1] and
-                    lower[2] <= b <= upper[2]):
+            # r, g, b = p
+            # if (lower[0] <= r <= upper[0] and
+            #     lower[1] <= g <= upper[1] and
+            #         lower[2] <= b <= upper[2]):
+            #     return (255, 255, 255)
+            if lower <= p <= upper:
                 return (255, 255, 255)
             return (0, 0, 0)
 
-        self.camera.update()
-        image = self.camera.value
+        image = self.bbcon.sensobs.values['camera']
         mapped = self.imager.map_image2(red_only, image=image)
-        mapped.dump_image(fid='image_mapped', type='png')
+
+        if self.debug:
+            mapped.dump_image(fid='image_mapped', type='png')
 
         im_arr = np.array(mapped.image)
-        mask = im_arr == [255, 255, 255]
-        white_pixels = np.sum(mask)
+        white_pixels = np.sum(im_arr == (255, 255, 255))
+
         ratio = white_pixels/(len(im_arr[0])*len(im_arr))
 
-        return (0.8 if ratio > 0.05 else 0, 5)
-
-    def calc_match(self, value):
-        return value
+        return 0.8 if ratio > 0.05 else 0, 5
 
 
 class Arbitrator:
@@ -308,19 +321,25 @@ class Arbitrator:
 
 
 def main():
-    motor = motors.Motors()
-    #motor.forward(0.5, 2.0)
-    motobs = Motob(motor)
-    sensor = rs.ReflectanceSensors()
-    sensor.calibrate()
-    print("Sensorverdi ", sensor.get_value())
-    sensor2 = us.Ultrasonic()
-    #bbcon = BBCON()
-    sensorer = [sensor2]
-    sensob = Sensobs(sensorer)
-    sensob.update()
-    print("Sensorverdi ", sensob.value)
-    '''bbcon.add_sensob(sensob)
+
+    # bbcon = BBCON()
+    # bbcon.add_behavior(FindRed())
+    # bbcon.add_behavior(Avoid())
+
+    # motor = motors.Motors()
+    # # motor.forward(0.5, 2.0)
+    # motobs = Motob(motor)
+    # sensor = rs.ReflectanceSensors()
+    # sensor.calibrate()
+    # print("Sensorverdi ", sensor.get_value())
+    # sensor2 = us.Ultrasonic()
+    # # bbcon = BBCON()
+    # sensorer = [sensor2]
+    # sensob = Sensobs(sensorer)
+    # sensob.update()
+    # print("Sensorverdi ", sensob.value)
+    '''
+    bbcon.add_sensob(sensob)
     bbcon.add_motob(motobs)
     avoid = Avoid(bbcon, sensob)
     x, y = avoid.update()  # sense_and_act()
@@ -338,18 +357,17 @@ def main():
     print("Choose ", choose, " halt ", halt)
     motobs.update(choose)
 
-    # arbi =
-    #white = WhiteFloor(bbcon, sensob)
-    #avoid = Avoid()
-    #red = FindRed()
-    # bbcon.add_behavior(white)
-    # bbcon.add_behavior(avoid)
-    # bbcon.add_behavior(red)
-    # while bbcon.halt is False:
-    #    bbcon.run_one_timestep()
-    # print(sensob.value)
-    #print(sensob.value)'''
-
+    white = WhiteFloor(bbcon, sensob)
+    avoid = Avoid()
+    red = FindRed()
+    bbcon.add_behavior(white)
+    bbcon.add_behavior(avoid)
+    bbcon.add_behavior(red)
+    while bbcon.halt is False:
+    bbcon.run_one_timestep()
+    print(sensob.value)
+    print(sensob.value)
+    '''
 
 
 # main()

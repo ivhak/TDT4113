@@ -4,10 +4,10 @@ BBCON
 from reflectance_sensors import ReflectanceSensors
 from ultrasonic import Ultrasonic
 from camera import Camera
-from motors import Motors
 from imager2 import Imager
-import numpy as np
 from RPi import GPIO
+import numpy as np
+import motors as m
 
 IMG_WIDTH = 40
 IMG_HEIGHT = 96
@@ -15,7 +15,7 @@ IMG_HEIGHT = 96
 
 class BBCON:
     def __init__(self):
-        self.motor = Motors()
+        self.motor = m.Motors()
         self.behaviors = []
         self.sensobs = {
             Camera(img_width=IMG_WIDTH, img_height=IMG_HEIGHT): None,
@@ -123,7 +123,7 @@ class WhiteFloor(Behavior):
             if number > maks:
                 maks = number
                 index = value[number]
-        degree = self.calc_match(value, maks)
+        self.match_degree = self.calc_match(value, maks)
 
         if index == 0 or index == 1:
             self.motor_recommendations = 1  # [1, 0]#motors.right(0.25, 5)
@@ -133,7 +133,6 @@ class WhiteFloor(Behavior):
             self.motor_recommendations = 3  # [1, 1]#motors.forward(0.25, 5)
         else:
             self.motor_recommendations = 4  # [-1, -1]#motors.backward(0.25, 5)
-        return degree, self.motor_recommendations
 
     def calc_match(self, value, maks):
         diff = maks - 350
@@ -150,6 +149,8 @@ class FindRed(Behavior):
     def __init__(self, sensob=None, debug=False):
         self.priority = 1
         self.debug = debug
+        self.motor_recommendations = m.forward()
+        self.motor_settings = (0.5, 4)
         self.imager = Imager(width=IMG_WIDTH, height=IMG_HEIGHT)
         super().__init__()
 
@@ -185,7 +186,7 @@ class FindRed(Behavior):
 
         ratio = white_pixels/(len(im_arr[0])*len(im_arr))
 
-        return 0.8 if ratio > 0.05 else 0, 5
+        self.match_degree = 0.8 if ratio > 0.05 else 0
 
 
 def main():
