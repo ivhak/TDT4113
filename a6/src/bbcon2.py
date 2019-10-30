@@ -8,8 +8,8 @@ from motors import Motors
 from imager2 import Imager
 from RPi import GPIO
 from zumo_button import ZumoButton
-import wiringpi as wp
 import numpy as np
+import sys
 
 IMG_WIDTH = 40
 IMG_HEIGHT = 96
@@ -21,7 +21,7 @@ class BBCON:
         self.behaviors = []
         self.sensobs = {
             Camera(img_width=IMG_WIDTH, img_height=IMG_HEIGHT): None,
-            Ultrasonic(): None,
+            # Ultrasonic(): None,
             ReflectanceSensors(): None
         }
         self.arbitrator = None
@@ -32,6 +32,7 @@ class BBCON:
             behavior.bbcon = self
 
     def update_sensobs(self):
+        print("Updating sensobs...")
         for sensob in self.sensobs.keys():
             self.sensobs[sensob] = sensob.update()
 
@@ -45,25 +46,32 @@ class BBCON:
         arbitrator.bbcon = self
 
     def run_one_timestep(self):
+        print("Running one timestep...")
         self.update_sensobs()
+        print("Updated sensobs...")
         for behavior in self.behaviors:
             behavior.update()
 
         chosen_behavior = self.arbitrator.choose_behavior()
-        if chosen_behavior.motor_settings:
+        if chosen_behavior.motor_speed:
             chosen_behavior.motor_recommendations(
-                self.motor, *chosen_behavior.motor_settings)
+                self.motor, speed=chosen_behavior.motor_speed)
         else:
             chosen_behavior.motor_recommendations(self.motor)
-        print("Chose behavior: {}".format(chosen_behavior))
+
+        print("Chose behavior:       {}".format(chosen_behavior))
+        print("Chose reccomendation: {}".format(
+            chosen_behavior.motor_recommendations))
+        print("Chose settings:       {}".format(
+            chosen_behavior.motor_speed))
 
 
 class Behavior:
     def __init__(self):
         self.motor_recommendations = None
+        self.motor_speed = None
         self.active_flag = False
         self.halt_request = None  # ??
-        self.priority = 0
         self.match_degree = 0  # Regnes ut i fra
         self.weight = 0  # self.match_degree * pri
 
@@ -78,10 +86,10 @@ class Behavior:
             self.active_flag = True
 
     def update(self):
-        if self.active_flag:
-            self.consider_deactivation()
-        else:
-            self.consider_activation()
+        # if self.active_flag:
+        #     self.consider_deactivation()
+        # else:
+        #     self.consider_activation()
         self.sense_and_act()
         self.update_weight()
 
@@ -100,15 +108,14 @@ class Behavior:
 
 class Avoid(Behavior):
     def __init__(self):
-        self.priority = 1
         super().__init__()
+        self.priority = 0
 
     def __name__(self):
         return "Avoid"
 
     def sense_and_act(self):
         value = self.bbcon.get_sensob_value(Ultrasonic)
-        print("Value is ", value)
         self.match_degree = self.calc_match(value)
         self.motor_recommendations = Motors.backward
 
@@ -118,35 +125,40 @@ class Avoid(Behavior):
 
 class WhiteFloor(Behavior):
     def __init__(self):
-        self.priority = 3
         super().__init__()
+        self.priority = 3
 
     def __name__(self):
         return "WhiteFloor"
 
     def sense_and_act(self):
         value = self.bbcon.get_sensob_value(ReflectanceSensors)
-        maks = 350
-        index = -1
-        for number in value:
-            if number > maks:
-                maks = number
-                index = value[number]
-        self.match_degree = self.calc_match(value, maks)
+        # mini = 1
+        # index = -1
+        print('ReflectanceSensors: ', value)
+        # for i, number in enumerate(value):
+        #     if number < mini:
+        #         mini = number
+        #         index = i
 
-        if index == 0 or index == 1:
-            self.motor_recommendations = Motors.right  #
-        elif index == 5 or index == 4:
-            self.motor_recommendations = Motors.left
-        elif index == -1:
-            self.motor_recommendations = Motors.forward
-        else:
-            self.motor_recommendations = Motors.backward
+        self.match_degree = 0
+        if sum(value) == 0:
+            self.match_degree = 1
 
-    def calc_match(self, value, maks):
-        diff = maks - 350
-        degree = diff / 650  # 2000 skal den få veldig høy degree
-        return degree
+        # self.match_degree = self.calc_match(mini)
+
+        # if index == 0 or index == 1:
+        #     self.motor_recommendations = Motors.right  #
+        # elif index == 5 or index == 4:
+        #     self.motor_recommendations = Motors.left
+        # elif index == -1:
+        #     self.motor_recommendations = Motors.forward
+        # else:
+        self.motor_recommendations = Motors.backward
+        self.motor_speed = 0.75
+
+    def calc_match(self, maks):
+        return 1 - maks
 
 
 class FindRed(Behavior):
@@ -156,12 +168,10 @@ class FindRed(Behavior):
     """
 
     def __init__(self, sensob=None, debug=False):
-        self.priority = 1
-        self.debug = debug
-        self.motor_recommendations = Motors.forward
-        self.motor_settings = (0.5, 4)
-        self.imager = Imager(width=IMG_WIDTH, height=IMG_HEIGHT)
         super().__init__()
+        self.priority = 2
+        self.debug = debug
+        self.imager = Imager(width=IMG_WIDTH, height=IMG_HEIGHT)
 
     def __name__(self):
         return "FindRed"
@@ -198,11 +208,10 @@ class FindRed(Behavior):
         self.match_degree = 0.8
         if ratio > 0.5:
             self.motor_recommendations = Motors.forward
-            self.motor_settings = (0.5, 5)
+            self.motor_speed = 0.7
         else:
             self.motor_recommendations = Motors.forward
-            self.motor_settings = (0.1, 5)
-
+            self.motor_speed = 0.3
 
 
 class Arbitrator:
@@ -211,28 +220,33 @@ class Arbitrator:
         self.bbcon = None
 
     def choose_behavior(self):
-        return self.bbcon.behaviors[0]
+        print("choosing behavior...")
         chosen_behavior = None
         maks = 0
         for behavior in self.bbcon.behaviors:
-            if behavior.weight >= maks:
+            print("{}: {}".format(behavior.__name__(), behavior.weight))
+            if behavior.weight > maks:
+                maks = behavior.weight
                 chosen_behavior = behavior
         return chosen_behavior
 
 
 def main():
     GPIO.setwarnings(False)
-    wp.wiringPiSetupGpio()
     bbcon = BBCON()
     bbcon.add_behavior(FindRed())
-    # bbcon.add_behavior(Avoid())
-    # bbcon.add_behavior(WhiteFloor())
+    bbcon.add_behavior(Avoid())
+    bbcon.add_behavior(WhiteFloor())
     bbcon.add_arbitrator(Arbitrator())
 
     ZumoButton().wait_for_press()
 
-    while True:
-        bbcon.run_one_timestep()
+    try:
+        while True:
+            bbcon.run_one_timestep()
+    except KeyboardInterrupt:
+        bbcon.motor.stop()
+        sys.exit("Stopping motors")
 
 
 if __name__ == '__main__':

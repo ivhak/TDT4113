@@ -47,7 +47,7 @@ class Ultrasonic():
         # Finner saa den tiden det siste signalet kommer inn paa echo_pin
         while read_val == 1:
             read_val = GPIO.input(self.echo_pin)
-            signalon = time.time() # Kan flytte denne ut av loopen dersom det skaper delay og unoyaktighet
+        signalon = time.time() # Kan flytte denne ut av loopen dersom det skaper delay og unoyaktighet
 
         # Den kalkulerte avstanden
         distance = self.compute_distance(signalon, signaloff)

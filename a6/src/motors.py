@@ -19,6 +19,8 @@ class Motors():
         wp.pinMode(23, 1)
         wp.pinMode(24, 1)
 
+        wp.wiringPiSetupGpio()
+
         self.set_left_dir(0)  # Set rotation direction to forward for both wheels
         self.set_right_dir(0)
 
