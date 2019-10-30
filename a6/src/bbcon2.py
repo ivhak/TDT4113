@@ -19,9 +19,11 @@ class BBCON:
     def __init__(self):
         self.motor = Motors()
         self.behaviors = []
+
+
         self.sensobs = {
             Camera(img_width=IMG_WIDTH, img_height=IMG_HEIGHT): None,
-            # Ultrasonic(): None,
+            Ultrasonic(): None,
             ReflectanceSensors(): None
         }
         self.arbitrator = None
@@ -33,8 +35,11 @@ class BBCON:
 
     def update_sensobs(self):
         print("Updating sensobs...")
+        print("Sensorene ", self.sensobs)
         for sensob in self.sensobs.keys():
-            self.sensobs[sensob] = sensob.update()
+            sensob.update()
+            self.sensobs[sensob] = sensob.value
+
 
     def get_sensob_value(self, sensob):
         for key, value in self.sensobs.items():
@@ -53,17 +58,23 @@ class BBCON:
             behavior.update()
 
         chosen_behavior = self.arbitrator.choose_behavior()
+
         if chosen_behavior.motor_speed:
+            print("Inni red")
             chosen_behavior.motor_recommendations(
                 self.motor, speed=chosen_behavior.motor_speed)
         else:
+            print("Inni avoid eller white")
             chosen_behavior.motor_recommendations(self.motor)
+
+        self.motor.left()
 
         print("Chose behavior:       {}".format(chosen_behavior))
         print("Chose reccomendation: {}".format(
             chosen_behavior.motor_recommendations))
         print("Chose settings:       {}".format(
             chosen_behavior.motor_speed))
+
 
 
 class Behavior:
@@ -106,21 +117,26 @@ class Behavior:
         return self.weight
 
 
+
+
 class Avoid(Behavior):
     def __init__(self):
         super().__init__()
-        self.priority = 0
+        self.priority = 2
 
     def __name__(self):
         return "Avoid"
 
     def sense_and_act(self):
         value = self.bbcon.get_sensob_value(Ultrasonic)
+        #print("Verdi paa ultrasonic: ", value)
         self.match_degree = self.calc_match(value)
         self.motor_recommendations = Motors.backward
 
     def calc_match(self, value):
-        return 1/value if value else 1
+        if value < 5:
+            return 1
+        return 0
 
 
 class WhiteFloor(Behavior):
@@ -142,7 +158,7 @@ class WhiteFloor(Behavior):
         #         index = i
 
         self.match_degree = 0
-        if sum(value) == 0:
+        if sum(value) < 2.5:
             self.match_degree = 1
 
         # self.match_degree = self.calc_match(mini)
@@ -232,6 +248,9 @@ class Arbitrator:
 
 
 def main():
+    mot = Motors()
+    mot.setup()
+    mot.forward()
     GPIO.setwarnings(False)
     bbcon = BBCON()
     bbcon.add_behavior(FindRed())
