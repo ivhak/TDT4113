@@ -62,10 +62,10 @@ class Behavior:
     def __init__(self):
         self.motor_recommendations = None
         self.active_flag = False
-        self.halt_request = None  # ??
+        self.halt_request = None    # ??
         self.priority = 0
-        self.match_degree = 0  # Regnes ut i fra
-        self.weight = 0  # self.match_degree * pri
+        self.match_degree = 0       # Regnes ut i fra
+        self.weight = 0             # self.match_degree * pri
 
     def consider_deactivation(self):
         if self.active_flag:
