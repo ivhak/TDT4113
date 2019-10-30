@@ -10,7 +10,7 @@ from ultrasonic import Ultrasonic
 from zumo_button import ZumoButton
 
 
-## BE SURE TO RUN THESE DEMOS ON THE FLOOR or to have plenty of people guarding
+## BE SURE TO RUN THESE DEMOS ON jarle.furre@gmail.com FLOOR or to have plenty of people guarding
 ## #  the edges of a table if it is run there.
 
 # This just moves the robot around in a fixed dance pattern.  It uses no sensors.
@@ -72,3 +72,7 @@ def shoot_panorama(camera,motors,shots=5):
         im = im.concat_horiz(IMR.Imager(image=camera.update()))
     return im
 
+
+
+if __name__ == "__main__":
+    explorer()
