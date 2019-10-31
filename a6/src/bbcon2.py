@@ -1,6 +1,10 @@
 """
 BBCON
 """
+
+import random
+import sys
+import numpy as np
 from reflectance_sensors import ReflectanceSensors
 from ultrasonic import Ultrasonic
 from camera import Camera
@@ -8,18 +12,18 @@ from motors import Motors
 from imager2 import Imager
 from RPi import GPIO
 from zumo_button import ZumoButton
-import numpy as np
-import sys
 
 IMG_WIDTH = 40
 IMG_HEIGHT = 96
+LOW = 1
+MED = 2
+HIGH = 3
 
 
 class BBCON:
     def __init__(self):
         self.motor = Motors()
         self.behaviors = []
-
 
         self.sensobs = {
             Camera(img_width=IMG_WIDTH, img_height=IMG_HEIGHT): None,
@@ -29,28 +33,50 @@ class BBCON:
         self.arbitrator = None
 
     def add_behavior(self, behavior):
+        """
+        Add behavior to the list of behaviors, set bbcon for the behavior to
+        self
+        """
         if behavior not in self.behaviors:
             self.behaviors.append(behavior)
             behavior.bbcon = self
 
     def update_sensobs(self):
+        """
+        Tell each of the sensobs to update, store the new value in its
+        corresponding field in sensobs
+        """
         print("Updating sensobs...")
         print("Sensorene ", self.sensobs)
         for sensob in self.sensobs.keys():
             sensob.update()
             self.sensobs[sensob] = sensob.value
 
-
     def get_sensob_value(self, sensob):
+        """
+        Get the value of a sensob, by the class of the sensob, i.e.
+        to get the last value from camera use
+            get_sensob_value(Camera)
+        """
         for key, value in self.sensobs.items():
             if isinstance(key, sensob):
                 return value
 
     def add_arbitrator(self, arbitrator):
+        """
+        Set arbitrator and set the arbitrators bbcon to self
+        """
         self.arbitrator = arbitrator
         arbitrator.bbcon = self
 
     def run_one_timestep(self):
+        """
+        This runs each iteration.
+            1. Update all sensobs
+            2. Update all the behaviors with the new values from the sensobs
+            3. Arbitrator chooses the next behavior
+            4. Run the chosen behaviors motor reccomendations
+        """
         print("Running one timestep...")
         self.update_sensobs()
         print("Updated sensobs...")
@@ -60,11 +86,9 @@ class BBCON:
         chosen_behavior = self.arbitrator.choose_behavior()
 
         if chosen_behavior.motor_speed:
-            print("Inni red")
             chosen_behavior.motor_recommendations(
                 self.motor, speed=chosen_behavior.motor_speed)
         else:
-            print("Inni avoid eller white")
             chosen_behavior.motor_recommendations(self.motor)
 
         self.motor.left()
@@ -76,15 +100,20 @@ class BBCON:
             chosen_behavior.motor_speed))
 
 
-
 class Behavior:
+    """
+    Super class for the different behaviors
+    """
+
     def __init__(self):
         self.motor_recommendations = None
         self.motor_speed = None
         self.active_flag = False
-        self.halt_request = None  # ??
-        self.match_degree = 0  # Regnes ut i fra
-        self.weight = 0  # self.match_degree * pri
+        self.halt_request = None
+        self.bbcon = None
+        self.priority = 0
+        self.match_degree = 0
+        self.weight = 0
 
     def consider_deactivation(self):
         if self.active_flag:
@@ -97,6 +126,9 @@ class Behavior:
             self.active_flag = True
 
     def update(self):
+        """
+        Act upon the new values from the sensor and recalculate weight
+        """
         # if self.active_flag:
         #     self.consider_deactivation()
         # else:
@@ -105,31 +137,33 @@ class Behavior:
         self.update_weight()
 
     def sense_and_act(self):
+        """
+        Set new motor recommendations and match degree based upon newest sensor
+        values
+        """
         pass
 
     def update_weight(self):
+        """
+        Calculate the new weight from the newly updated weight
+        """
         self.weight = self.match_degree * self.priority
-
-    def get_motor_rec(self):
-        return self.motor_recommendations
-
-    def get_w(self):
-        return self.weight
-
-
 
 
 class Avoid(Behavior):
+    """
+    Uses the ultrasonic sensor to see if there is an object blocking the path
+    """
+
     def __init__(self):
         super().__init__()
-        self.priority = 2
+        self.priority = MED
 
     def __name__(self):
         return "Avoid"
 
     def sense_and_act(self):
         value = self.bbcon.get_sensob_value(Ultrasonic)
-        #print("Verdi paa ultrasonic: ", value)
         self.match_degree = self.calc_match(value)
         self.motor_recommendations = Motors.backward
 
@@ -140,9 +174,15 @@ class Avoid(Behavior):
 
 
 class WhiteFloor(Behavior):
+    """
+    Uses the ir sensor to see if there is black tape under the robot
+    """
+
     def __init__(self):
         super().__init__()
-        self.priority = 3
+        self.priority = HIGH
+        self.motor_recommendations = Motors.backward
+        self.motor_speed = 0.5
 
     def __name__(self):
         return "WhiteFloor"
@@ -170,8 +210,6 @@ class WhiteFloor(Behavior):
         # elif index == -1:
         #     self.motor_recommendations = Motors.forward
         # else:
-        self.motor_recommendations = Motors.backward
-        self.motor_speed = 0.75
 
     def calc_match(self, maks):
         return 1 - maks
@@ -179,15 +217,15 @@ class WhiteFloor(Behavior):
 
 class FindRed(Behavior):
     """
-    This behavior advices the robot to accelerate whenever the camera spots
-    something red.
+    Uses the camera to find out if there is a red object in front of the robot
     """
 
     def __init__(self, sensob=None, debug=False):
         super().__init__()
-        self.priority = 2
+        self.priority = MED
         self.debug = debug
         self.imager = Imager(width=IMG_WIDTH, height=IMG_HEIGHT)
+        self.motor_recommendations = Motors.forward
 
     def __name__(self):
         return "FindRed"
@@ -196,7 +234,6 @@ class FindRed(Behavior):
         """
         Take a picture, find the percentage of red pixels
         """
-
         def red_only(p):
             """
             Maps red pixels to white, everything else to black
@@ -205,7 +242,7 @@ class FindRed(Behavior):
             upper = (255, 100, 100)
             r, g, b = p
             if (lower[0] <= r <= upper[0] and
-                lower[1] <= g <= upper[1] and
+                    lower[1] <= g <= upper[1] and
                     lower[2] <= b <= upper[2]):
                 return (255, 255, 255)
             return (0, 0, 0)
@@ -221,13 +258,30 @@ class FindRed(Behavior):
 
         ratio = white_pixels/(len(im_arr[0])*len(im_arr))
 
-        self.match_degree = 0.8
         if ratio > 0.5:
-            self.motor_recommendations = Motors.forward
+            self.match_degree = 0.8
             self.motor_speed = 0.7
         else:
-            self.motor_recommendations = Motors.forward
+            self.match_degree = 0
             self.motor_speed = 0.3
+
+
+class Default(Behavior):
+    """
+    If none of the other behaviors need to act, we default to doing something
+    random
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.priority = LOW
+        self.weight = 1
+
+    def sense_and_act(self):
+        self.motor_recommendations = random.choice(
+            [Motors.forward, Motors.backward,
+             Motors.left, Motors.right, Motors.stop]
+        )
 
 
 class Arbitrator:
@@ -248,14 +302,12 @@ class Arbitrator:
 
 
 def main():
-    mot = Motors()
-    mot.setup()
-    mot.forward()
     GPIO.setwarnings(False)
     bbcon = BBCON()
     bbcon.add_behavior(FindRed())
     bbcon.add_behavior(Avoid())
     bbcon.add_behavior(WhiteFloor())
+    bbcon.add_behavior(Default())
     bbcon.add_arbitrator(Arbitrator())
 
     ZumoButton().wait_for_press()
