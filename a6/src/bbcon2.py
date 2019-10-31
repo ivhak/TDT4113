@@ -5,6 +5,7 @@ BBCON
 import random
 import sys
 import numpy as np
+import wiringpi as wp
 from reflectance_sensors import ReflectanceSensors
 from ultrasonic import Ultrasonic
 from camera import Camera
@@ -21,9 +22,10 @@ HIGH = 3
 
 
 class BBCON:
-    def __init__(self):
+    def __init__(self, debug=False):
         self.motor = Motors()
         self.behaviors = []
+        self.debug = debug
 
         self.sensobs = {
             Camera(img_width=IMG_WIDTH, img_height=IMG_HEIGHT): None,
@@ -46,8 +48,6 @@ class BBCON:
         Tell each of the sensobs to update, store the new value in its
         corresponding field in sensobs
         """
-        print("Updating sensobs...")
-        print("Sensorene ", self.sensobs)
         for sensob in self.sensobs.keys():
             sensob.update()
             self.sensobs[sensob] = sensob.value
@@ -77,21 +77,18 @@ class BBCON:
             3. Arbitrator chooses the next behavior
             4. Run the chosen behaviors motor reccomendations
         """
-        print("Running one timestep...")
         self.update_sensobs()
-        print("Updated sensobs...")
         for behavior in self.behaviors:
             behavior.update()
 
         chosen_behavior = self.arbitrator.choose_behavior()
 
-        if chosen_behavior.motor_speed:
-            chosen_behavior.motor_recommendations(
-                self.motor, speed=chosen_behavior.motor_speed)
-        else:
-            chosen_behavior.motor_recommendations(self.motor)
-
-        self.motor.left()
+        if not self.debug:
+            for rec in chosen_behavior.motor_recommendations:
+                if chosen_behavior.motor_speed:
+                    rec(self.motor, speed=chosen_behavior.motor_speed)
+                else:
+                    rec(self.motor)
 
         print("Chose behavior:       {}".format(chosen_behavior))
         print("Chose reccomendation: {}".format(
@@ -158,6 +155,7 @@ class Avoid(Behavior):
     def __init__(self):
         super().__init__()
         self.priority = MED
+        self.motor_recommendations = [Motors.backward]
 
     def __name__(self):
         return "Avoid"
@@ -165,12 +163,9 @@ class Avoid(Behavior):
     def sense_and_act(self):
         value = self.bbcon.get_sensob_value(Ultrasonic)
         self.match_degree = self.calc_match(value)
-        self.motor_recommendations = Motors.backward
 
     def calc_match(self, value):
-        if value < 5:
-            return 1
-        return 0
+        return 1 if value < 15 else 0
 
 
 class WhiteFloor(Behavior):
@@ -181,8 +176,8 @@ class WhiteFloor(Behavior):
     def __init__(self):
         super().__init__()
         self.priority = HIGH
-        self.motor_recommendations = Motors.backward
-        self.motor_speed = 0.5
+        self.motor_recommendations = [Motors.backward, Motors.left]
+        self.motor_speed = 0.3
 
     def __name__(self):
         return "WhiteFloor"
@@ -198,7 +193,8 @@ class WhiteFloor(Behavior):
         #         index = i
 
         self.match_degree = 0
-        if sum(value) < 2.5:
+        # if sum(value)/len(value) < 0.5:
+        if min(value) < 0.2:
             self.match_degree = 1
 
         # self.match_degree = self.calc_match(mini)
@@ -225,7 +221,7 @@ class FindRed(Behavior):
         self.priority = MED
         self.debug = debug
         self.imager = Imager(width=IMG_WIDTH, height=IMG_HEIGHT)
-        self.motor_recommendations = Motors.forward
+        self.motor_recommendations = [Motors.forward]
 
     def __name__(self):
         return "FindRed"
@@ -260,7 +256,7 @@ class FindRed(Behavior):
 
         if ratio > 0.5:
             self.match_degree = 0.8
-            self.motor_speed = 0.7
+            self.motor_speed = 1
         else:
             self.match_degree = 0
             self.motor_speed = 0.3
@@ -276,11 +272,15 @@ class Default(Behavior):
         super().__init__()
         self.priority = LOW
         self.weight = 1
+        self.match_degree = 1
+        self.motor_recommendations = [Motors.forward, None]
+
+    def __name__(self):
+        return "Default"
 
     def sense_and_act(self):
-        self.motor_recommendations = random.choice(
-            [Motors.forward, Motors.backward,
-             Motors.left, Motors.right, Motors.stop]
+        self.motor_recommendations[1] = random.choice(
+            [Motors.forward, Motors.left, Motors.right]
         )
 
 
@@ -290,7 +290,6 @@ class Arbitrator:
         self.bbcon = None
 
     def choose_behavior(self):
-        print("choosing behavior...")
         chosen_behavior = None
         maks = 0
         for behavior in self.bbcon.behaviors:
@@ -303,7 +302,8 @@ class Arbitrator:
 
 def main():
     GPIO.setwarnings(False)
-    bbcon = BBCON()
+    wp.wiringPiSetupGpio()
+    bbcon = BBCON(debug=False)
     bbcon.add_behavior(FindRed())
     bbcon.add_behavior(Avoid())
     bbcon.add_behavior(WhiteFloor())
